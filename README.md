@@ -4,7 +4,7 @@ PWA Offline-First de planification de repas et liste de courses.
 
 Monorepo npm workspaces :
 
-- `apps/web` — Vite + React 19 + Dexie + PWA + produits + recettes/plans (Étape 4)
+- `apps/web` — Vite + React 19 + Dexie + PWA + produits + recettes/plans + liste (Étape 5)
 - `apps/api` — API Fastify + MongoDB (auth JWT, catalogue, sync LWW)
 - `packages/shared` — types, `normalizeProductName`, schemas Zod
 
@@ -105,7 +105,7 @@ Ouvre [http://localhost:5173](http://localhost:5173). Les appels `/api/*` sont p
 
 Les documents sync utilisent des **UUID v4 string** comme `_id` (pas d’ObjectId Mongo).
 
-## Front (Étapes 2–3)
+## Front (Étapes 2–5)
 
 - Routing mobile + layout (bottom nav)
 - Auth UI login/register branchée API
@@ -115,6 +115,7 @@ Les documents sync utilisent des **UUID v4 string** comme `_id` (pas d’ObjectI
 - Indicateur online / offline / sync
 - **Produits** : autocomplete sur `catalogProducts ∪ products` via `normalizeProductName` (anti-doublons accents/casse)
 - **Recettes / plans** : CRUD offline avec ingrédients (autocomplete) et slots (date + mealType + recipeId)
+- **Liste de courses** : génération consolidée depuis un plan, extras, cochage offline, regroupement par catégorie
 
 ### Tester l’anti-doublons produits
 
@@ -131,6 +132,13 @@ Les documents sync utilisent des **UUID v4 string** comme `_id` (pas d’ObjectI
 3. **Plans** → Nouveau → ajouter des créneaux (date + type + recette) → Enregistrer.
 4. Repasser online : outbox flush + sync ; recharger → données toujours là.
 
+### Tester liste de courses
+
+1. Avoir un plan avec recettes + ingrédients.
+2. **Courses** → choisir le plan → **Générer la liste** (quantités × servings / override, consolidées productId+unit).
+3. Ajouter un extra (ex. `éponge`) via autocomplete.
+4. DevTools Offline → cocher/décocher → outbox ; online → sync.
+
 ## Roadmap
 
-Prochaine livrable : **Étape 5** — liste de courses.
+Prochaine livrable : **Étape 6** — durcissement offline.

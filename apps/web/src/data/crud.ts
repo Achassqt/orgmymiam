@@ -8,6 +8,7 @@ import {
   type Recipe,
   type RecipeIngredient,
   type ShoppingList,
+  type ShoppingListItem,
 } from '@orgmymiam/shared';
 import { db, getMeta, META_KEYS, type AuthSession, type OutboxEntry } from '../db/database';
 import { enqueueOutbox } from '../sync/engine';
@@ -326,16 +327,20 @@ export async function softDeleteMealPlan(id: string): Promise<void> {
   await queueMutation('meal_plans', 'delete', updated);
 }
 
-export async function createShoppingList(input: { title: string }): Promise<ShoppingList> {
+export async function createShoppingList(input: {
+  title: string;
+  mealPlanId?: string | null;
+  items?: ShoppingListItem[];
+}): Promise<ShoppingList> {
   const userId = await requireUserId();
   const now = nowIso();
   const list: ShoppingList = {
     _id: crypto.randomUUID(),
     userId,
     title: input.title.trim(),
-    mealPlanId: null,
+    mealPlanId: input.mealPlanId ?? null,
     status: 'open',
-    items: [],
+    items: input.items ?? [],
     memberIds: [userId],
     createdAt: now,
     updatedAt: now,
@@ -345,6 +350,109 @@ export async function createShoppingList(input: { title: string }): Promise<Shop
   await db.shoppingLists.put(list);
   await queueMutation('shopping_lists', 'create', list);
   return list;
+}
+
+export async function updateShoppingList(
+  id: string,
+  patch: {
+    title?: string;
+    status?: ShoppingList['status'];
+    mealPlanId?: string | null;
+    items?: ShoppingListItem[];
+  },
+): Promise<ShoppingList> {
+  const existing = await db.shoppingLists.get(id);
+  if (!existing || existing.deletedAt) {
+    throw new Error('Liste introuvable');
+  }
+  const updated: ShoppingList = {
+    ...existing,
+    title: patch.title?.trim() ?? existing.title,
+    status: patch.status ?? existing.status,
+    mealPlanId: patch.mealPlanId !== undefined ? patch.mealPlanId : existing.mealPlanId,
+    items: patch.items ?? existing.items,
+    updatedAt: nowIso(),
+    rev: existing.rev + 1,
+  };
+  await db.shoppingLists.put(updated);
+  await queueMutation('shopping_lists', 'update', updated);
+  return updated;
+}
+
+export async function toggleShoppingItem(
+  listId: string,
+  itemId: string,
+  checked?: boolean,
+): Promise<ShoppingList> {
+  const existing = await db.shoppingLists.get(listId);
+  if (!existing || existing.deletedAt) {
+    throw new Error('Liste introuvable');
+  }
+  const now = nowIso();
+  const items = existing.items.map((item) => {
+    if (item.id !== itemId) return item;
+    const nextChecked = checked ?? !item.checked;
+    return {
+      ...item,
+      checked: nextChecked,
+      checkedAt: nextChecked ? now : null,
+      updatedAt: now,
+    };
+  });
+  return updateShoppingList(listId, { items });
+}
+
+export async function addExtraItemToList(
+  listId: string,
+  item: ShoppingListItem,
+): Promise<ShoppingList> {
+  const existing = await db.shoppingLists.get(listId);
+  if (!existing || existing.deletedAt) {
+    throw new Error('Liste introuvable');
+  }
+
+  // Consolider avec un extra existant même productId+unit
+  const keyMatch = (row: ShoppingListItem) =>
+    row.origin === 'extra' &&
+    row.productId === item.productId &&
+    row.productSource === item.productSource &&
+    row.unit === item.unit;
+
+  const existingExtra = existing.items.find(keyMatch);
+  let items: ShoppingListItem[];
+  if (existingExtra) {
+    items = existing.items.map((row) =>
+      row.id === existingExtra.id
+        ? {
+            ...row,
+            quantity: roundQtyLocal(row.quantity + item.quantity),
+            nameSnapshot: item.nameSnapshot,
+            category: item.category,
+            updatedAt: nowIso(),
+            checked: false,
+            checkedAt: null,
+          }
+        : row,
+    );
+  } else {
+    items = [...existing.items, item];
+  }
+
+  return updateShoppingList(listId, { items });
+}
+
+function roundQtyLocal(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+export async function removeShoppingItem(listId: string, itemId: string): Promise<ShoppingList> {
+  const existing = await db.shoppingLists.get(listId);
+  if (!existing || existing.deletedAt) {
+    throw new Error('Liste introuvable');
+  }
+  return updateShoppingList(listId, {
+    items: existing.items.filter((item) => item.id !== itemId),
+  });
 }
 
 export async function softDeleteShoppingList(id: string): Promise<void> {
