@@ -1,0 +1,33 @@
+{
+  "name": "orgmymiam",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "PWA Offline-First de planification de repas et liste de courses",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @orgmymiam/shared && npm run build -w @orgmymiam/api && npm run build -w @orgmymiam/web",
+    "build:shared": "npm run build -w @orgmymiam/shared",
+    "build:api": "npm run build -w @orgmymiam/api",
+    "dev:api": "npm run dev -w @orgmymiam/api",
+    "dev:web": "npm run dev -w @orgmymiam/web",
+    "seed": "npm run seed -w @orgmymiam/api",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck -w @orgmymiam/shared && npm run typecheck -w @orgmymiam/api && npm run typecheck -w @orgmymiam/web"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.1"
+  }
+}
