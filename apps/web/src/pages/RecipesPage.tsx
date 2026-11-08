@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { createRecipe, softDeleteRecipe } from '../data/crud';
+import { RecipeEditor } from '../components/RecipeEditor';
+import { softDeleteRecipe } from '../data/crud';
 import { db } from '../db/database';
 
 export function RecipesPage() {
@@ -13,50 +14,61 @@ export function RecipesPage() {
           .sortBy('updatedAt'),
       [],
     ) ?? [];
-  const [title, setTitle] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  async function onCreate(event: FormEvent) {
-    event.preventDefault();
-    if (!title.trim()) return;
-    setBusy(true);
-    try {
-      await createRecipe({ title });
-      setTitle('');
-    } finally {
-      setBusy(false);
-    }
+  const selected = recipes.find((r) => r._id === selectedId) ?? null;
+
+  if (mode === 'create' || (mode === 'edit' && selected)) {
+    return (
+      <section className="page-section">
+        <RecipeEditor
+          recipe={mode === 'edit' ? selected : null}
+          onCancel={() => {
+            setMode('list');
+            setSelectedId(null);
+          }}
+          onDone={() => {
+            setMode('list');
+            setSelectedId(null);
+          }}
+        />
+      </section>
+    );
   }
 
   return (
     <section className="page-section">
-      <h1>Recettes</h1>
-      <p className="lede">
-        Placeholder CRUD local. Ingrédients détaillés = Étape 4.
-      </p>
-
-      <form className="inline-form" onSubmit={(e) => void onCreate(e)}>
-        <input
-          placeholder="Titre de recette…"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-        />
-        <button type="submit" className="primary-btn" disabled={busy}>
-          Ajouter
+      <div className="page-heading">
+        <div>
+          <h1>Recettes</h1>
+          <p className="lede">CRUD offline : portions, ingrédients (catalogue ou perso), notes.</p>
+        </div>
+        <button type="button" className="primary-btn" onClick={() => setMode('create')}>
+          Nouvelle
         </button>
-      </form>
+      </div>
 
       {recipes.length === 0 ? (
-        <p className="empty">Aucune recette.</p>
+        <p className="empty">Aucune recette — crée-en une, même hors ligne.</p>
       ) : (
         <ul className="entity-list">
           {recipes.map((recipe) => (
             <li key={recipe._id}>
-              <div>
+              <button
+                type="button"
+                className="entity-main-btn"
+                onClick={() => {
+                  setSelectedId(recipe._id);
+                  setMode('edit');
+                }}
+              >
                 <strong>{recipe.title}</strong>
-                <span className="meta">{recipe.servings} portions</span>
-              </div>
+                <span className="meta">
+                  {recipe.servings} portions · {recipe.ingredients.length} ingrédient
+                  {recipe.ingredients.length === 1 ? '' : 's'}
+                </span>
+              </button>
               <button
                 type="button"
                 className="ghost-btn"

@@ -12,6 +12,12 @@ export interface ProductSearchBoxProps {
   onCreate: (name: string) => Promise<void> | void;
   onSelect: (hit: ProductHit) => Promise<void> | void;
   placeholder?: string;
+  /** Libellé du bouton submit quand pas de match exact */
+  addLabel?: string;
+  /** Libellé du bouton submit sur match exact */
+  reuseLabel?: string;
+  /** Masquer les hints de normalisation */
+  compact?: boolean;
 }
 
 export function ProductSearchBox({
@@ -19,6 +25,9 @@ export function ProductSearchBox({
   onCreate,
   onSelect,
   placeholder = 'Rechercher un produit…',
+  addLabel = 'Ajouter',
+  reuseLabel = 'Réutiliser',
+  compact = false,
 }: ProductSearchBoxProps) {
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -183,18 +192,18 @@ export function ProductSearchBox({
         </div>
 
         <button type="submit" className="primary-btn" disabled={busy || !query.trim()}>
-          {result.exactMatch ? 'Réutiliser' : 'Ajouter'}
+          {result.exactMatch ? reuseLabel : addLabel}
         </button>
       </form>
 
-      {result.exactMatch && query.trim() ? (
+      {!compact && result.exactMatch && query.trim() ? (
         <p className="search-hint">
           Match exact ({result.exactMatch.source === 'catalog' ? 'catalogue' : 'perso'}) après
           normalisation : <code>{result.normalizedQuery}</code>
         </p>
       ) : null}
 
-      {notice ? <p className="search-notice">{notice}</p> : null}
+      {!compact && notice ? <p className="search-notice">{notice}</p> : null}
     </div>
   );
 }

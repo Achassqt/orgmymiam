@@ -1,6 +1,17 @@
-import { normalizeProductName, type MealPlan, type Product, type ProductCategory, type Recipe, type ShoppingList } from '@orgmymiam/shared';
+import {
+  normalizeProductName,
+  type MealPlan,
+  type MealSlot,
+  type MealType,
+  type Product,
+  type ProductCategory,
+  type Recipe,
+  type RecipeIngredient,
+  type ShoppingList,
+} from '@orgmymiam/shared';
 import { db, getMeta, META_KEYS, type AuthSession, type OutboxEntry } from '../db/database';
 import { enqueueOutbox } from '../sync/engine';
+import type { ProductHit } from './productSearch';
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -132,7 +143,12 @@ export async function softDeleteProduct(id: string): Promise<void> {
   await queueMutation('products', 'delete', updated);
 }
 
-export async function createRecipe(input: { title: string; servings?: number }): Promise<Recipe> {
+export async function createRecipe(input: {
+  title: string;
+  servings?: number;
+  notes?: string;
+  ingredients?: RecipeIngredient[];
+}): Promise<Recipe> {
   const userId = await requireUserId();
   const now = nowIso();
   const recipe: Recipe = {
@@ -140,8 +156,8 @@ export async function createRecipe(input: { title: string; servings?: number }):
     userId,
     title: input.title.trim(),
     servings: input.servings ?? 2,
-    ingredients: [],
-    notes: '',
+    ingredients: input.ingredients ?? [],
+    notes: input.notes?.trim() ?? '',
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -150,6 +166,33 @@ export async function createRecipe(input: { title: string; servings?: number }):
   await db.recipes.put(recipe);
   await queueMutation('recipes', 'create', recipe);
   return recipe;
+}
+
+export async function updateRecipe(
+  id: string,
+  patch: {
+    title?: string;
+    servings?: number;
+    notes?: string;
+    ingredients?: RecipeIngredient[];
+  },
+): Promise<Recipe> {
+  const existing = await db.recipes.get(id);
+  if (!existing || existing.deletedAt) {
+    throw new Error('Recette introuvable');
+  }
+  const updated: Recipe = {
+    ...existing,
+    title: patch.title?.trim() ?? existing.title,
+    servings: patch.servings ?? existing.servings,
+    notes: patch.notes !== undefined ? patch.notes.trim() : existing.notes,
+    ingredients: patch.ingredients ?? existing.ingredients,
+    updatedAt: nowIso(),
+    rev: existing.rev + 1,
+  };
+  await db.recipes.put(updated);
+  await queueMutation('recipes', 'update', updated);
+  return updated;
 }
 
 export async function softDeleteRecipe(id: string): Promise<void> {
@@ -165,7 +208,53 @@ export async function softDeleteRecipe(id: string): Promise<void> {
   await queueMutation('recipes', 'delete', updated);
 }
 
-export async function createMealPlan(input: { title: string; startDate: string }): Promise<MealPlan> {
+/** Résout un hit autocomplete vers une référence d’ingrédient (catalog|user). */
+export async function resolveIngredientFromHit(
+  hit: ProductHit,
+  quantity: number,
+  unit?: string,
+): Promise<RecipeIngredient & { name: string }> {
+  if (hit.source === 'catalog' && hit.catalogId) {
+    return {
+      productId: hit.catalogId,
+      productSource: 'catalog',
+      quantity,
+      unit: unit?.trim() || hit.defaultUnit,
+      name: hit.name,
+    };
+  }
+  if (hit.source === 'user' && hit.userProductId) {
+    return {
+      productId: hit.userProductId,
+      productSource: 'user',
+      quantity,
+      unit: unit?.trim() || hit.defaultUnit,
+      name: hit.name,
+    };
+  }
+  throw new Error('Hit produit invalide');
+}
+
+export async function resolveIngredientFromNewProduct(
+  name: string,
+  quantity: number,
+  unit?: string,
+): Promise<RecipeIngredient & { name: string }> {
+  const created = await createProduct({ name });
+  return {
+    productId: created.product._id,
+    productSource: 'user',
+    quantity,
+    unit: unit?.trim() || created.product.defaultUnit,
+    name: created.product.name,
+  };
+}
+
+export async function createMealPlan(input: {
+  title: string;
+  startDate: string;
+  slots?: MealSlot[];
+}): Promise<MealPlan> {
   const userId = await requireUserId();
   const now = nowIso();
   const plan: MealPlan = {
@@ -173,7 +262,7 @@ export async function createMealPlan(input: { title: string; startDate: string }
     userId,
     title: input.title.trim(),
     startDate: input.startDate,
-    slots: [],
+    slots: input.slots ?? [],
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -182,6 +271,46 @@ export async function createMealPlan(input: { title: string; startDate: string }
   await db.mealPlans.put(plan);
   await queueMutation('meal_plans', 'create', plan);
   return plan;
+}
+
+export async function updateMealPlan(
+  id: string,
+  patch: {
+    title?: string;
+    startDate?: string;
+    slots?: MealSlot[];
+  },
+): Promise<MealPlan> {
+  const existing = await db.mealPlans.get(id);
+  if (!existing || existing.deletedAt) {
+    throw new Error('Plan introuvable');
+  }
+  const updated: MealPlan = {
+    ...existing,
+    title: patch.title?.trim() ?? existing.title,
+    startDate: patch.startDate ?? existing.startDate,
+    slots: patch.slots ?? existing.slots,
+    updatedAt: nowIso(),
+    rev: existing.rev + 1,
+  };
+  await db.mealPlans.put(updated);
+  await queueMutation('meal_plans', 'update', updated);
+  return updated;
+}
+
+export function buildMealSlot(input: {
+  date: string;
+  mealType: MealType;
+  recipeId: string;
+  servingsOverride?: number | null;
+}): MealSlot {
+  return {
+    id: crypto.randomUUID(),
+    date: input.date,
+    mealType: input.mealType,
+    recipeId: input.recipeId,
+    servingsOverride: input.servingsOverride ?? null,
+  };
 }
 
 export async function softDeleteMealPlan(id: string): Promise<void> {
