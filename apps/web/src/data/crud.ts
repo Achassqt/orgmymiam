@@ -31,21 +31,66 @@ async function queueMutation(
   await enqueueOutbox(entry);
 }
 
+export type CreateProductResult =
+  | { status: 'created'; product: Product }
+  | { status: 'reused_user'; product: Product }
+  | { status: 'reused_catalog'; product: Product; catalogId: string };
+
+/**
+ * Crée un produit user, ou réutilise un match exact (user prioritaire, sinon catalogue adopté).
+ * Offline-first : écriture Dexie + outbox.
+ */
 export async function createProduct(input: {
   name: string;
   category?: ProductCategory;
   defaultUnit?: string;
-}): Promise<Product> {
+  sourceCatalogId?: string | null;
+}): Promise<CreateProductResult> {
   const userId = await requireUserId();
+  const name = input.name.trim();
+  const nameNormalized = normalizeProductName(name);
+  if (!nameNormalized) {
+    throw new Error('Nom de produit vide');
+  }
+
+  const existingUser = await db.products
+    .filter((p) => p.deletedAt == null && p.nameNormalized === nameNormalized)
+    .first();
+  if (existingUser) {
+    return { status: 'reused_user', product: existingUser };
+  }
+
+  let sourceCatalogId = input.sourceCatalogId ?? null;
+  let category = input.category ?? 'autres';
+  let defaultUnit = input.defaultUnit ?? 'unité';
+  let displayName = name;
+
+  if (!sourceCatalogId) {
+    const catalogHit = await db.catalogProducts.where('nameNormalized').equals(nameNormalized).first();
+    if (catalogHit) {
+      sourceCatalogId = catalogHit._id;
+      category = catalogHit.category;
+      defaultUnit = catalogHit.defaultUnit;
+      displayName = catalogHit.name;
+    }
+  } else {
+    const catalogHit = await db.catalogProducts.get(sourceCatalogId);
+    if (catalogHit) {
+      category = catalogHit.category;
+      defaultUnit = catalogHit.defaultUnit;
+      displayName = catalogHit.name;
+    }
+  }
+
   const now = nowIso();
   const product: Product = {
     _id: crypto.randomUUID(),
     userId,
-    name: input.name.trim(),
-    nameNormalized: normalizeProductName(input.name),
-    category: input.category ?? 'autres',
-    defaultUnit: input.defaultUnit ?? 'unité',
-    sourceCatalogId: null,
+    name: displayName,
+    nameNormalized,
+    category,
+    defaultUnit,
+    sourceCatalogId,
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -53,7 +98,25 @@ export async function createProduct(input: {
   };
   await db.products.put(product);
   await queueMutation('products', 'create', product);
-  return product;
+
+  if (sourceCatalogId) {
+    return { status: 'reused_catalog', product, catalogId: sourceCatalogId };
+  }
+  return { status: 'created', product };
+}
+
+/** Adopte un produit catalogue dans la liste user (idempotent via nameNormalized). */
+export async function adoptCatalogProduct(catalogId: string): Promise<CreateProductResult> {
+  const catalog = await db.catalogProducts.get(catalogId);
+  if (!catalog) {
+    throw new Error('Produit catalogue introuvable');
+  }
+  return createProduct({
+    name: catalog.name,
+    category: catalog.category,
+    defaultUnit: catalog.defaultUnit,
+    sourceCatalogId: catalog._id,
+  });
 }
 
 export async function softDeleteProduct(id: string): Promise<void> {

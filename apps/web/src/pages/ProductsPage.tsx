@@ -1,6 +1,12 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { createProduct, softDeleteProduct } from '../data/crud';
+import { ProductSearchBox } from '../components/ProductSearchBox';
+import { adoptCatalogProduct, createProduct, softDeleteProduct } from '../data/crud';
+import {
+  categoryLabel,
+  loadProductUniverse,
+  type ProductHit,
+} from '../data/productSearch';
 import { db } from '../db/database';
 
 export function ProductsPage() {
@@ -13,18 +19,53 @@ export function ProductsPage() {
           .sortBy('updatedAt'),
       [],
     ) ?? [];
-  const catalogSample =
-    useLiveQuery(() => db.catalogProducts.orderBy('nameNormalized').limit(8).toArray(), []) ?? [];
-  const [name, setName] = useState('');
+  const universe = useLiveQuery(() => loadProductUniverse(), []) ?? [];
+  const catalogCount = useLiveQuery(() => db.catalogProducts.count(), []) ?? 0;
   const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [filter, setFilter] = useState('');
 
-  async function onCreate(event: FormEvent) {
-    event.preventDefault();
-    if (!name.trim()) return;
+  const filteredMine = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter(
+      (p) => p.name.toLowerCase().includes(q) || p.nameNormalized.includes(q),
+    );
+  }, [products, filter]);
+
+  async function handleCreate(name: string) {
     setBusy(true);
+    setFeedback(null);
     try {
-      await createProduct({ name });
-      setName('');
+      const result = await createProduct({ name });
+      if (result.status === 'reused_user') {
+        setFeedback(`Réutilisé (déjà présent) : « ${result.product.name} ».`);
+      } else if (result.status === 'reused_catalog') {
+        setFeedback(`Issu du catalogue, ajouté à tes produits : « ${result.product.name} ».`);
+      } else {
+        setFeedback(`Créé hors-ligne : « ${result.product.name} ».`);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSelect(hit: ProductHit) {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      if (hit.source === 'user' && hit.userProductId) {
+        setFeedback(`Produit déjà dans ta liste : « ${hit.name} ».`);
+        return;
+      }
+      if (hit.source === 'catalog' && hit.catalogId) {
+        const result = await adoptCatalogProduct(hit.catalogId);
+        if (result.status === 'reused_user') {
+          setFeedback(`Déjà adopté : « ${result.product.name} ».`);
+        } else {
+          setFeedback(`Catalogue adopté : « ${result.product.name} » (sync via outbox).`);
+        }
+      }
     } finally {
       setBusy(false);
     }
@@ -34,32 +75,44 @@ export function ProductsPage() {
     <section className="page-section">
       <h1>Produits</h1>
       <p className="lede">
-        CRUD local optimiste (Étape 2). Autocomplete anti-doublons = Étape 3.
+        Recherche hybride catalogue + perso, anti-doublons via normalisation (accents, casse,
+        pluriels légers).
       </p>
 
-      <form className="inline-form" onSubmit={(e) => void onCreate(e)}>
-        <input
-          placeholder="Nouveau produit…"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <button type="submit" className="primary-btn" disabled={busy}>
-          Ajouter
-        </button>
-      </form>
+      <p className="search-stats">
+        Index local : <strong>{universe.length}</strong> noms uniques · catalogue{' '}
+        <strong>{catalogCount}</strong> · perso <strong>{products.length}</strong>
+      </p>
+
+      <ProductSearchBox busy={busy} onCreate={handleCreate} onSelect={handleSelect} />
+
+      {feedback ? <p className="search-notice">{feedback}</p> : null}
 
       <h2 className="subhead">Mes produits</h2>
-      {products.length === 0 ? (
-        <p className="empty">Aucun produit perso pour l’instant.</p>
+      <input
+        className="filter-input"
+        placeholder="Filtrer ma liste…"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+      />
+
+      {filteredMine.length === 0 ? (
+        <p className="empty">
+          {products.length === 0
+            ? 'Aucun produit perso — cherche dans le catalogue ou crée-en un.'
+            : 'Aucun résultat pour ce filtre.'}
+        </p>
       ) : (
         <ul className="entity-list">
-          {products.map((product) => (
+          {filteredMine.map((product) => (
             <li key={product._id}>
               <div>
                 <strong>{product.name}</strong>
                 <span className="meta">
-                  {product.category} · {product.defaultUnit}
+                  {categoryLabel(product.category)} · {product.defaultUnit}
+                  {product.sourceCatalogId ? ' · depuis catalogue' : ' · perso'}
+                  <br />
+                  <code>{product.nameNormalized}</code>
                 </span>
               </div>
               <button
@@ -73,18 +126,6 @@ export function ProductsPage() {
           ))}
         </ul>
       )}
-
-      <h2 className="subhead">Aperçu catalogue</h2>
-      <ul className="entity-list muted">
-        {catalogSample.map((item) => (
-          <li key={item._id}>
-            <div>
-              <strong>{item.name}</strong>
-              <span className="meta">{item.category}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
     </section>
   );
 }

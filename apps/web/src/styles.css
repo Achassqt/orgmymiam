@@ -339,3 +339,101 @@ input {
     border-radius: 1rem 1rem 0 0;
   }
 }
+
+.search-stats {
+  margin: 0 0 0.85rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.product-search {
+  margin-bottom: 0.75rem;
+}
+
+.product-search-field {
+  position: relative;
+  min-width: 0;
+}
+
+.suggest-list {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.3rem);
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: #fff;
+  border: 1px solid rgba(20, 35, 29, 0.12);
+  border-radius: 0.85rem;
+  box-shadow: var(--shadow);
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.suggest-item {
+  width: 100%;
+  display: grid;
+  gap: 0.15rem;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.7rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.suggest-item:hover,
+.suggest-item.active {
+  background: var(--accent-soft);
+}
+
+.suggest-item.create {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.suggest-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.source-pill {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+}
+
+.source-pill.source-catalog {
+  background: rgba(31, 107, 82, 0.12);
+  color: var(--accent);
+}
+
+.source-pill.source-user {
+  background: rgba(20, 35, 29, 0.08);
+  color: var(--muted);
+}
+
+.search-hint,
+.search-notice {
+  margin: 0.35rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.search-notice {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.filter-input {
+  margin-bottom: 0.75rem;
+}
