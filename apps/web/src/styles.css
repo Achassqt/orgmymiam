@@ -1732,19 +1732,7 @@ textarea {
   align-self: center;
 }
 
-/* —— Partager / Imprimer (liste de courses) —— */
-
-.share-print-actions {
-  margin: 0.85rem 0 0.35rem;
-  gap: 0.65rem;
-}
-
-.share-print-actions .primary-btn,
-.share-print-actions .secondary-btn {
-  flex: 1 1 8rem;
-  min-height: 2.75rem;
-  font-size: 0.95rem;
-}
+/* —— Impression liste de courses (Partager / Imprimer via menu ⋯) —— */
 
 .print-sheet {
   display: none;

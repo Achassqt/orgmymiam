@@ -315,6 +315,18 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
             ← Retour
           </button>
           <ActionMenu label="Autres actions">
+            <ActionMenuItem
+              disabled={busy || list.items.length === 0}
+              onSelect={() => void onShare()}
+            >
+              Partager
+            </ActionMenuItem>
+            <ActionMenuItem
+              disabled={busy || list.items.length === 0}
+              onSelect={onPrint}
+            >
+              Imprimer
+            </ActionMenuItem>
             <ActionMenuItem onSelect={() => void onCloseList()}>
               {list.status === 'open' ? 'Marquer terminée' : 'Rouvrir'}
             </ActionMenuItem>
@@ -371,25 +383,6 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
             {planInfo.mealCount > 0 ? ` · ${planInfo.mealCount} repas` : ''}
           </p>
         ) : null}
-
-        <div className="editor-actions wrap share-print-actions">
-          <button
-            type="button"
-            className="secondary-btn bounce-press"
-            disabled={busy || list.items.length === 0}
-            onClick={() => void onShare()}
-          >
-            Partager
-          </button>
-          <button
-            type="button"
-            className="primary-btn bounce-press"
-            disabled={busy || list.items.length === 0}
-            onClick={onPrint}
-          >
-            Imprimer
-          </button>
-        </div>
 
         <div
           className="segmented"
