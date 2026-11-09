@@ -521,3 +521,67 @@ select {
 textarea {
   resize: vertical;
 }
+
+.generate-box {
+  margin-bottom: 1.25rem;
+  padding: 0.9rem;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(20, 35, 29, 0.06);
+}
+
+.category-block {
+  margin-top: 0.85rem;
+}
+
+.category-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.shop-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.shop-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.85rem;
+  background: var(--surface);
+  border: 1px solid rgba(20, 35, 29, 0.06);
+}
+
+.shop-item.checked {
+  opacity: 0.55;
+}
+
+.shop-item.checked strong {
+  text-decoration: line-through;
+}
+
+.shop-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.shop-check input {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.15rem;
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
