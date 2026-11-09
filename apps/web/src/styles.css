@@ -18,7 +18,8 @@
   --radius-pill: 999px;
   --shadow: 0 12px 28px rgba(30, 27, 75, 0.1);
   --shadow-pop: 0 8px 0 rgba(30, 27, 75, 0.12);
-  --nav-h: 4.75rem;
+  /* Emprise bottom-nav flottante (hauteur + offset bottom), hors safe-area. */
+  --nav-h: 6rem;
   --font-display: 'Fredoka', 'Nunito', 'Avenir Next', sans-serif;
   --font-body: 'Nunito', 'Avenir Next', 'Segoe UI', sans-serif;
   --ease-bounce: cubic-bezier(0.34, 1.45, 0.64, 1);
@@ -135,7 +136,8 @@ a:focus-visible {
 }
 
 .content {
-  padding: 1.25rem 1.15rem calc(var(--nav-h) + 1.5rem);
+  padding: 1.25rem 1.15rem
+    calc(var(--nav-h) + 2.25rem + env(safe-area-inset-bottom, 0px));
   width: min(42rem, 100%);
   margin: 0 auto;
 }
@@ -370,9 +372,15 @@ select {
   background: transparent;
   color: var(--muted);
   padding: 0.35rem 0.55rem;
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-decoration: underline;
   text-underline-offset: 0.15em;
   font-weight: 700;
+  box-sizing: border-box;
 }
 
 .bounce-press {
@@ -911,8 +919,8 @@ textarea {
 
 .shop-check {
   display: flex;
-  align-items: flex-start;
-  gap: 0.7rem;
+  align-items: center;
+  gap: 0.45rem;
   flex: 1;
   min-width: 0;
   cursor: pointer;
@@ -926,34 +934,52 @@ textarea {
   pointer-events: none;
 }
 
+/* Zone tactile 44×44 ; cercle visible via ::before (sans alourdir la ligne). */
 .shop-check-box {
+  width: 44px;
+  height: 44px;
+  margin-top: 0;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  position: relative;
+  display: grid;
+  place-items: center;
+  transition: transform 0.2s var(--ease-bounce);
+}
+
+.shop-check-box::before {
+  content: '';
   width: 1.45rem;
   height: 1.45rem;
-  margin-top: 0.1rem;
-  flex: 0 0 auto;
   border-radius: 50%;
   border: 3px solid var(--accent);
   background: #fff;
-  position: relative;
   transition:
     background 0.18s ease,
-    border-color 0.18s ease,
-    transform 0.2s var(--ease-bounce);
+    border-color 0.18s ease;
 }
 
 .shop-check-input:checked + .shop-check-box {
+  background: transparent;
+  animation: check-pop 0.35s var(--ease-bounce);
+}
+
+.shop-check-input:checked + .shop-check-box::before {
   background: var(--orange);
   border-color: var(--orange);
-  animation: check-pop 0.35s var(--ease-bounce);
 }
 
 .shop-check-input:checked + .shop-check-box::after {
   content: '';
   position: absolute;
-  left: 0.28rem;
-  top: 0.1rem;
+  left: 50%;
+  top: 50%;
   width: 0.35rem;
   height: 0.65rem;
+  margin-left: -0.1rem;
+  margin-top: -0.42rem;
   border: solid #fff;
   border-width: 0 2.5px 2.5px 0;
   transform: rotate(45deg);
@@ -1332,7 +1358,7 @@ textarea {
 .toast-stack {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--nav-h) + 0.85rem);
+  bottom: calc(var(--nav-h) + 0.85rem + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   z-index: 60;
   display: grid;
@@ -1393,8 +1419,8 @@ textarea {
 
 .onboarding-skip {
   position: absolute;
-  top: 0.65rem;
-  right: 0.75rem;
+  top: 0.35rem;
+  right: 0.35rem;
   border: none;
   background: transparent;
   color: var(--muted);
@@ -1402,7 +1428,13 @@ textarea {
   font-weight: 700;
   font-size: 0.85rem;
   cursor: pointer;
-  padding: 0.25rem 0.4rem;
+  padding: 0.5rem 0.65rem;
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .onboarding-illo {
@@ -1668,9 +1700,14 @@ textarea {
   font: inherit;
   font-weight: 800;
   font-size: 0.88rem;
-  padding: 0.45rem 0.95rem;
+  padding: 0.55rem 1rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .segmented-btn.active {
