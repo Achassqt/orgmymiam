@@ -18,7 +18,9 @@ async function main(): Promise<void> {
     catalogVersion: version,
   }));
 
-  await collections.catalogProducts.deleteMany({ catalogVersion: version });
+  // Remplace tout le catalogue (y compris d’anciennes versions) pour que le
+  // bump CATALOG_VERSION republie des nameNormalized corrigés sans fantômes.
+  await collections.catalogProducts.deleteMany({});
   if (docs.length > 0) {
     await collections.catalogProducts.insertMany(docs);
   }

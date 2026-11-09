@@ -11,6 +11,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { loginRequest, logoutLocal, registerRequest } from '../api/client';
 import { refreshHouseholdCache } from '../data/household';
 import { db, META_KEYS, setMeta, type AuthSession } from '../db/database';
+import { migrateNameNormalizedLigatures } from '../db/migrateNameNormalized';
 import { bindOnlineSync, runSync } from '../sync/engine';
 
 interface AuthContextValue {
@@ -37,7 +38,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     bindOnlineSync();
-    setBooting(false);
+    void (async () => {
+      try {
+        await migrateNameNormalizedLigatures();
+      } catch {
+        // migration best-effort : ne bloque pas le boot
+      } finally {
+        setBooting(false);
+      }
+    })();
   }, []);
 
   useEffect(() => {

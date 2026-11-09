@@ -313,9 +313,19 @@ async function applyPull(payload: Awaited<ReturnType<typeof pullChanges>>): Prom
 export async function syncCatalog(): Promise<void> {
   const sinceVersion = (await getMeta<number>(META_KEYS.catalogVersion)) ?? 0;
   const catalog = await fetchCatalog(sinceVersion);
-  if (catalog.products.length > 0) {
+  const versionAdvanced = catalog.catalogVersion > sinceVersion;
+
+  // Nouveau catalogVersion : remplacer la table locale pour éviter d’empiler
+  // d’anciens docs (ex. nameNormalized « ufs » pour Œufs) à côté du seed corrigé.
+  if (versionAdvanced && catalog.products.length > 0) {
+    await db.transaction('rw', db.catalogProducts, async () => {
+      await db.catalogProducts.clear();
+      await db.catalogProducts.bulkPut(catalog.products);
+    });
+  } else if (catalog.products.length > 0) {
     await db.catalogProducts.bulkPut(catalog.products);
   }
+
   await setMeta(META_KEYS.catalogVersion, catalog.catalogVersion);
 }
 

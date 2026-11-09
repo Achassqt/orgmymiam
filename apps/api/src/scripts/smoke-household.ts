@@ -15,7 +15,7 @@ async function main() {
   process.env.API_HOST = '127.0.0.1';
   process.env.API_PORT = '3457';
   process.env.CORS_ORIGIN = 'http://localhost:5173';
-  process.env.CATALOG_VERSION = '1';
+  process.env.CATALOG_VERSION = '2';
   process.env.NODE_ENV = 'test';
 
   // Imports après env (config lit process.env au load)

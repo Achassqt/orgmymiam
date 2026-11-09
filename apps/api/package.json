@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "seed": "tsx src/scripts/seed-catalog.ts",
+    "renormalize-products": "tsx src/scripts/renormalize-products.ts",
     "smoke:household": "tsx src/scripts/smoke-household.ts",
     "test": "tsx --test src/routes/households.me.test.ts"
   },
