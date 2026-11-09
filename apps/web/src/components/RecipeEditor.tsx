@@ -12,6 +12,7 @@ import type { ProductHit } from '../data/productSearch';
 import { formatQuantityOf, roundQty, scaleQuantity } from '../lib/units';
 import { ProductSearchBox } from './ProductSearchBox';
 import { UnitSelect } from './UnitSelect';
+import { VisibilityToggle } from './VisibilityToggle';
 
 interface DraftIngredient extends RecipeIngredient {
   key: string;
@@ -267,6 +268,13 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
             placeholder="Astuces, temps de cuisson…"
           />
         </label>
+        {recipe ? (
+          <VisibilityToggle
+            entity="recipes"
+            id={recipe._id}
+            value={recipe.visibility ?? 'private'}
+          />
+        ) : null}
       </div>
 
       <h3 className="subhead">Ingrédients</h3>

@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useAuth } from '../auth/AuthProvider';
+import { PullToRefresh } from '../components/PullToRefresh';
 import { ShoppingListDetail } from '../components/ShoppingListDetail';
+import { HouseholdBadge } from '../components/VisibilityToggle';
 import { createShoppingList, softDeleteShoppingList } from '../data/crud';
 import { generateShoppingListFromMealPlan } from '../data/shoppingList';
 import { db } from '../db/database';
@@ -14,8 +16,6 @@ export function ShoppingListPage() {
       () =>
         userId
           ? db.shoppingLists
-              .where('userId')
-              .equals(userId)
               .filter((l) => l.deletedAt == null)
               .reverse()
               .sortBy('updatedAt')
@@ -27,8 +27,6 @@ export function ShoppingListPage() {
       () =>
         userId
           ? db.mealPlans
-              .where('userId')
-              .equals(userId)
               .filter((p) => p.deletedAt == null)
               .reverse()
               .sortBy('updatedAt')
@@ -112,88 +110,102 @@ export function ShoppingListPage() {
   }
 
   return (
-    <section className="page-section">
-      <h1>Liste de courses</h1>
-      <p className="lede">
-        Génère depuis un planning, ajuste les quantités, coche au fur et à mesure.
-      </p>
+    <PullToRefresh>
+      <section className="page-section">
+        <h1>Liste de courses</h1>
+        <p className="lede">
+          Génère depuis un planning, ajuste les quantités, coche au fur et à mesure.
+        </p>
 
-      <div className="stack-form generate-box">
-        <label>
-          Depuis un planning
-          <select value={mealPlanId} onChange={(e) => setMealPlanId(e.target.value)}>
-            <option value="">Choisir…</option>
-            {plans.map((plan) => (
-              <option key={plan._id} value={plan._id}>
-                {plan.title} ({plan.slots.length} repas)
-              </option>
-            ))}
-          </select>
-        </label>
-        {portionsPreview ? (
-          <p className="portions-banner" role="status">
-            {portionsPreview.summary}
-          </p>
-        ) : null}
-        <label>
-          Titre (optionnel)
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Courses semaine…"
-          />
-        </label>
-        <div className="editor-actions wrap">
-          <button
-            type="button"
-            className="primary-btn"
-            disabled={busy || !mealPlanId}
-            onClick={() => void onGenerate()}
-          >
-            Générer la liste
-          </button>
-          <button type="button" className="ghost-btn" disabled={busy} onClick={() => void onCreateEmpty()}>
-            Liste vide
-          </button>
+        <div className="stack-form generate-box">
+          <label>
+            Depuis un planning
+            <select value={mealPlanId} onChange={(e) => setMealPlanId(e.target.value)}>
+              <option value="">Choisir…</option>
+              {plans.map((plan) => (
+                <option key={plan._id} value={plan._id}>
+                  {plan.title} ({plan.slots.length} repas)
+                </option>
+              ))}
+            </select>
+          </label>
+          {portionsPreview ? (
+            <p className="portions-banner" role="status">
+              {portionsPreview.summary}
+            </p>
+          ) : null}
+          <label>
+            Titre (optionnel)
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Courses semaine…"
+            />
+          </label>
+          <div className="editor-actions wrap">
+            <button
+              type="button"
+              className="primary-btn"
+              disabled={busy || !mealPlanId}
+              onClick={() => void onGenerate()}
+            >
+              Générer la liste
+            </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              disabled={busy}
+              onClick={() => void onCreateEmpty()}
+            >
+              Liste vide
+            </button>
+          </div>
+          {plans.length === 0 ? (
+            <p className="empty">
+              Crée d’abord un planning avec des recettes pour générer une liste.
+            </p>
+          ) : null}
+          {error ? <p className="form-error">{error}</p> : null}
         </div>
-        {plans.length === 0 ? (
-          <p className="empty">Crée d’abord un planning avec des recettes pour générer une liste.</p>
-        ) : null}
-        {error ? <p className="form-error">{error}</p> : null}
-      </div>
 
-      <h2 className="subhead">Mes listes</h2>
-      {lists.length === 0 ? (
-        <p className="empty">Aucune liste pour l’instant.</p>
-      ) : (
-        <ul className="entity-list">
-          {lists.map((list) => {
-            const checked = list.items.filter((i) => i.checked).length;
-            return (
-              <li key={list._id}>
-                <button
-                  type="button"
-                  className="entity-main-btn"
-                  onClick={() => setSelectedId(list._id)}
-                >
-                  <strong>{list.title}</strong>
-                  <span className="meta">
-                    {list.status === 'open' ? 'Ouverte' : 'Terminée'} · {checked}/
-                    {list.items.length} · {list.mealPlanId ? 'depuis planning' : 'manuelle'}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  onClick={() => void softDeleteShoppingList(list._id)}
-                >
-                  Suppr.
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
+        <h2 className="subhead">Mes listes</h2>
+        {lists.length === 0 ? (
+          <p className="empty">Aucune liste pour l’instant.</p>
+        ) : (
+          <ul className="entity-list">
+            {lists.map((list) => {
+              const checked = list.items.filter((i) => i.checked).length;
+              return (
+                <li key={list._id}>
+                  <button
+                    type="button"
+                    className="entity-main-btn"
+                    onClick={() => setSelectedId(list._id)}
+                  >
+                    <strong>
+                      {list.title} <HouseholdBadge visibility={list.visibility} />
+                    </strong>
+                    <span className="meta">
+                      {list.status === 'open' ? 'Ouverte' : 'Terminée'} · {checked}/
+                      {list.items.length} · {list.mealPlanId ? 'depuis planning' : 'manuelle'}
+                      {list.visibility === 'household'
+                        ? ` · ${list.memberIds.length} membre${list.memberIds.length === 1 ? '' : 's'}`
+                        : ''}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    onClick={() => void softDeleteShoppingList(list._id)}
+                  >
+                    Suppr.
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    </PullToRefresh>
   );
 }

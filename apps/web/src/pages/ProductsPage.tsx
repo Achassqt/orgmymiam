@@ -16,8 +16,6 @@ export function ProductsPage() {
       () =>
         userId
           ? db.products
-              .where('userId')
-              .equals(userId)
               .filter((p) => p.deletedAt == null)
               .reverse()
               .sortBy('updatedAt')

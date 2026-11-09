@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { buildMealSlot, createMealPlan, updateMealPlan } from '../data/crud';
 import { MEAL_TYPE_LABELS } from '../data/productSearch';
 import { db } from '../db/database';
+import { VisibilityToggle } from './VisibilityToggle';
 
 interface MealPlanEditorProps {
   plan?: MealPlan | null;
@@ -31,14 +32,7 @@ export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) 
   const userId = session?.user._id;
   const recipes =
     useLiveQuery(
-      () =>
-        userId
-          ? db.recipes
-              .where('userId')
-              .equals(userId)
-              .filter((r) => r.deletedAt == null)
-              .sortBy('title')
-          : [],
+      () => (userId ? db.recipes.filter((r) => r.deletedAt == null).sortBy('title') : []),
       [userId],
     ) ?? [];
 
@@ -201,6 +195,13 @@ export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) 
             required
           />
         </label>
+        {plan ? (
+          <VisibilityToggle
+            entity="meal_plans"
+            id={plan._id}
+            value={plan.visibility ?? 'private'}
+          />
+        ) : null}
       </div>
 
       <h3 className="subhead">Créneaux</h3>

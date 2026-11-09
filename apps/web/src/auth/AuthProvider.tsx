@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { loginRequest, logoutLocal, registerRequest } from '../api/client';
+import { refreshHouseholdCache } from '../data/household';
 import { db, META_KEYS, setMeta, type AuthSession } from '../db/database';
 import { bindOnlineSync, runSync } from '../sync/engine';
 
@@ -48,7 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (session?.accessToken) {
-      void runSync('auth');
+      void (async () => {
+        try {
+          await refreshHouseholdCache();
+        } catch {
+          // offline / erreur réseau : garder le cache local
+        }
+        await runSync('auth');
+      })();
     }
   }, [session?.accessToken]);
 

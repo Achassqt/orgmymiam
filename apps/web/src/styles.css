@@ -726,3 +726,142 @@ textarea {
   flex: 0 0 auto;
   accent-color: var(--accent);
 }
+
+/* —— Foyer / partage —— */
+.foyer-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.foyer-link:hover {
+  text-decoration: underline;
+}
+
+.home-foyer-cta {
+  margin: 0 0 1rem;
+}
+
+.home-foyer-cta a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.household-card {
+  margin-bottom: 1.25rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(20, 35, 29, 0.06);
+}
+
+.invite-code {
+  letter-spacing: 0.12em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.household-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1a3a2f;
+  background: rgba(46, 139, 87, 0.18);
+  border-radius: 0.4rem;
+  vertical-align: middle;
+}
+
+.visibility-toggle {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.visibility-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.visibility-switch {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border-radius: 0.75rem;
+  background: rgba(20, 35, 29, 0.06);
+  width: fit-content;
+}
+
+.vis-btn {
+  border: none;
+  background: transparent;
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.6rem;
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+
+.vis-btn.active {
+  background: var(--surface, #fff);
+  box-shadow: 0 1px 2px rgba(20, 35, 29, 0.08);
+  font-weight: 700;
+}
+
+.members-hint {
+  margin: 0.15rem 0 0.5rem;
+}
+
+.entity-main-btn.static {
+  cursor: default;
+}
+
+.danger-text {
+  color: #a33 !important;
+}
+
+/* —— Pull-to-refresh —— */
+.ptr-root {
+  min-height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ptr-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  transition: height 0.12s ease-out;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.ptr-indicator:not(.visible) {
+  height: 0 !important;
+}
+
+.ptr-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(46, 139, 87, 0.25);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+}
+
+.ptr-spinner.spinning {
+  animation: ptr-spin 0.7s linear infinite;
+}
+
+@keyframes ptr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ptr-label {
+  font-weight: 600;
+}

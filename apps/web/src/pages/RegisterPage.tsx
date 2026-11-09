@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { ApiError } from '../api/client';
 
 export function RegisterPage() {
   const { session, register, loading } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const next = params.get('next') || '/';
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,7 +15,7 @@ export function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
 
   if (!loading && session) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={next.startsWith('/') ? next : '/'} replace />;
   }
 
   async function onSubmit(event: FormEvent) {
@@ -26,7 +28,7 @@ export function RegisterPage() {
         password,
         displayName: displayName.trim(),
       });
-      navigate('/', { replace: true });
+      navigate(next.startsWith('/') ? next : '/', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Inscription impossible');
     } finally {

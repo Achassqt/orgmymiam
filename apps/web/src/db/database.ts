@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type {
   CatalogProduct,
+  HouseholdResponse,
   MealPlan,
   Product,
   PublicUser,
@@ -41,6 +42,7 @@ export type MetaValue =
   | boolean
   | null
   | AuthSession
+  | HouseholdResponse
   | Record<string, unknown>;
 
 export interface MetaRecord {
@@ -53,6 +55,8 @@ export const META_KEYS = {
   auth: 'auth',
   /** Dernier userId connu — survit à un auth null (token expiré) pour éviter une purge mono-compte. */
   lastUserId: 'lastUserId',
+  /** Cache foyer courant (HouseholdResponse | null). */
+  household: 'household',
   catalogVersion: 'catalogVersion',
   lastSyncAt: 'lastSyncAt',
   lastSyncError: 'lastSyncError',
@@ -81,6 +85,16 @@ export class OrgMyMiamDB extends Dexie {
       recipes: '_id, userId, updatedAt, deletedAt',
       mealPlans: '_id, userId, updatedAt, deletedAt, startDate',
       shoppingLists: '_id, userId, updatedAt, deletedAt, status',
+      outbox: 'id, entity, entityId, createdAt',
+    });
+
+    this.version(2).stores({
+      meta: 'key',
+      catalogProducts: '_id, nameNormalized, catalogVersion, category',
+      products: '_id, userId, householdId, nameNormalized, updatedAt, deletedAt',
+      recipes: '_id, userId, householdId, updatedAt, deletedAt',
+      mealPlans: '_id, userId, householdId, updatedAt, deletedAt, startDate',
+      shoppingLists: '_id, userId, householdId, updatedAt, deletedAt, status',
       outbox: 'id, entity, entityId, createdAt',
     });
   }
@@ -118,6 +132,7 @@ export async function deleteMeta(key: string): Promise<void> {
 export const USER_SCOPED_META_KEYS = [
   META_KEYS.auth,
   META_KEYS.lastUserId,
+  META_KEYS.household,
   META_KEYS.lastSyncAt,
   META_KEYS.lastSyncError,
   META_KEYS.lastSyncStatus,
@@ -154,15 +169,27 @@ export async function hasLocalUserScopedData(): Promise<boolean> {
   return products + recipes + mealPlans + shoppingLists + outbox > 0;
 }
 
-/** True si une table user contient un autre `userId` que celui fourni. */
+/**
+ * True s’il reste des docs d’un autre compte hors partage foyer.
+ * Les docs `visibility: household` d’autres membres sont attendus après pull.
+ */
 export async function hasForeignUserScopedData(userId: string): Promise<boolean> {
+  const isForeignPrivate = (row: { userId: string; visibility?: string }) =>
+    row.userId !== userId && row.visibility !== 'household';
   const [product, recipe, mealPlan, shoppingList] = await Promise.all([
-    db.products.filter((row) => row.userId !== userId).first(),
-    db.recipes.filter((row) => row.userId !== userId).first(),
-    db.mealPlans.filter((row) => row.userId !== userId).first(),
-    db.shoppingLists.filter((row) => row.userId !== userId).first(),
+    db.products.filter(isForeignPrivate).first(),
+    db.recipes.filter(isForeignPrivate).first(),
+    db.mealPlans.filter(isForeignPrivate).first(),
+    db.shoppingLists.filter(isForeignPrivate).first(),
   ]);
   return Boolean(product || recipe || mealPlan || shoppingList);
+}
+
+/** Docs visibles localement : perso + partagés foyer déjà pullés. */
+export function isLocallyVisibleDoc(
+  row: { deletedAt: string | null },
+): boolean {
+  return row.deletedAt == null;
 }
 
 export async function getSessionUserId(): Promise<string | null> {

@@ -16,12 +16,41 @@ export const mealTypeSchema = z.enum(MEAL_TYPES);
 export const productSourceSchema = z.enum(PRODUCT_SOURCES);
 export const shoppingListStatusSchema = z.enum(SHOPPING_LIST_STATUSES);
 export const itemOriginSchema = z.enum(ITEM_ORIGINS);
+export const visibilitySchema = z.enum(['private', 'household']);
 
 export const syncMetaSchema = z.object({
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema,
   deletedAt: isoDateTimeSchema.nullable(),
   rev: z.number().int().positive(),
+});
+
+/** Champs foyer — défauts pour docs existants / clients anciens. */
+export const householdShareSchema = z.object({
+  householdId: uuidSchema.nullable().default(null),
+  visibility: visibilitySchema.default('private'),
+});
+
+export const householdSchema = z.object({
+  _id: uuidSchema,
+  name: z.string().min(1).max(80),
+  inviteCode: z.string().regex(/^[A-Z0-9]{6}$/),
+  ownerId: uuidSchema,
+  memberIds: z.array(uuidSchema).min(1).max(8),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+
+export const createHouseholdSchema = z.object({
+  name: z.string().min(1).max(80),
+});
+
+export const joinHouseholdSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9]{6}$/, 'Code invalide'),
 });
 
 export const catalogProductSchema = z.object({
@@ -43,7 +72,8 @@ export const productSchema = z
     defaultUnit: z.string().min(1).max(40),
     sourceCatalogId: uuidSchema.nullable(),
   })
-  .merge(syncMetaSchema);
+  .merge(syncMetaSchema)
+  .merge(householdShareSchema);
 
 export const recipeIngredientSchema = z.object({
   productId: uuidSchema,
@@ -61,7 +91,8 @@ export const recipeSchema = z
     ingredients: z.array(recipeIngredientSchema),
     notes: z.string().max(5000).default(''),
   })
-  .merge(syncMetaSchema);
+  .merge(syncMetaSchema)
+  .merge(householdShareSchema);
 
 export const mealSlotSchema = z.object({
   id: uuidSchema,
@@ -79,7 +110,8 @@ export const mealPlanSchema = z
     startDate: isoDateSchema,
     slots: z.array(mealSlotSchema),
   })
-  .merge(syncMetaSchema);
+  .merge(syncMetaSchema)
+  .merge(householdShareSchema);
 
 export const shoppingListItemSchema = z.object({
   id: uuidSchema,
@@ -104,9 +136,10 @@ export const shoppingListSchema = z
     mealPlanId: uuidSchema.nullable(),
     status: shoppingListStatusSchema,
     items: z.array(shoppingListItemSchema),
-    memberIds: z.array(uuidSchema).min(1),
+    memberIds: z.array(uuidSchema).min(1).max(8),
   })
-  .merge(syncMetaSchema);
+  .merge(syncMetaSchema)
+  .merge(householdShareSchema);
 
 export const registerSchema = z.object({
   email: z.string().email().max(320),

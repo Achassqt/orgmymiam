@@ -9,9 +9,11 @@ import {
   type RecipeIngredient,
   type ShoppingList,
   type ShoppingListItem,
+  type Visibility,
 } from '@orgmymiam/shared';
 import { db, getMeta, META_KEYS, type AuthSession, type OutboxEntry } from '../db/database';
 import { enqueueOutbox } from '../sync/engine';
+import { defaultShareFields, getCachedHousehold, type CachedHousehold } from './household';
 import type { ProductHit } from './productSearch';
 
 function nowIso(): string {
@@ -26,15 +28,33 @@ async function requireUserId(): Promise<string> {
   return session.user._id;
 }
 
-function assertOwned<T extends { userId: string }>(
-  row: T | undefined,
+function canAccessDoc(
+  row: { userId: string; visibility?: Visibility; householdId?: string | null },
   userId: string,
-  label: string,
-): T {
-  if (!row || row.userId !== userId) {
+  household: CachedHousehold,
+): boolean {
+  if (row.userId === userId) return true;
+  if (row.visibility !== 'household' || !row.householdId || !household?.household) {
+    return false;
+  }
+  return (
+    row.householdId === household.household._id &&
+    household.household.memberIds.includes(userId)
+  );
+}
+
+function assertAccessible<
+  T extends { userId: string; visibility?: Visibility; householdId?: string | null },
+>(row: T | undefined, userId: string, household: CachedHousehold, label: string): T {
+  if (!row || !canAccessDoc(row, userId, household)) {
     throw new Error(`${label} introuvable`);
   }
   return row;
+}
+
+async function shareDefaults() {
+  const household = await getCachedHousehold();
+  return { household, share: defaultShareFields(household) };
 }
 
 async function queueMutation(
@@ -108,6 +128,7 @@ export async function createProduct(input: {
   }
 
   const now = nowIso();
+  const { share } = await shareDefaults();
   const product: Product = {
     _id: crypto.randomUUID(),
     userId,
@@ -116,6 +137,8 @@ export async function createProduct(input: {
     category,
     defaultUnit,
     sourceCatalogId,
+    householdId: share.householdId,
+    visibility: share.visibility,
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -146,8 +169,9 @@ export async function adoptCatalogProduct(catalogId: string): Promise<CreateProd
 
 export async function softDeleteProduct(id: string): Promise<void> {
   const userId = await requireUserId();
+  const household = await getCachedHousehold();
   const existing = await db.products.get(id);
-  if (!existing || existing.userId !== userId) return;
+  if (!existing || !canAccessDoc(existing, userId, household)) return;
   const updated: Product = {
     ...existing,
     deletedAt: nowIso(),
@@ -166,6 +190,7 @@ export async function createRecipe(input: {
 }): Promise<Recipe> {
   const userId = await requireUserId();
   const now = nowIso();
+  const { share } = await shareDefaults();
   const recipe: Recipe = {
     _id: crypto.randomUUID(),
     userId,
@@ -173,6 +198,8 @@ export async function createRecipe(input: {
     servings: input.servings ?? 2,
     ingredients: input.ingredients ?? [],
     notes: input.notes?.trim() ?? '',
+    householdId: share.householdId,
+    visibility: share.visibility,
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -193,7 +220,8 @@ export async function updateRecipe(
   },
 ): Promise<Recipe> {
   const userId = await requireUserId();
-  const existing = assertOwned(await db.recipes.get(id), userId, 'Recette');
+  const household = await getCachedHousehold();
+  const existing = assertAccessible(await db.recipes.get(id), userId, household, 'Recette');
   if (existing.deletedAt) {
     throw new Error('Recette introuvable');
   }
@@ -213,8 +241,9 @@ export async function updateRecipe(
 
 export async function softDeleteRecipe(id: string): Promise<void> {
   const userId = await requireUserId();
+  const household = await getCachedHousehold();
   const existing = await db.recipes.get(id);
-  if (!existing || existing.userId !== userId) return;
+  if (!existing || !canAccessDoc(existing, userId, household)) return;
   const updated: Recipe = {
     ...existing,
     deletedAt: nowIso(),
@@ -277,12 +306,15 @@ export async function createMealPlan(input: {
 }): Promise<MealPlan> {
   const userId = await requireUserId();
   const now = nowIso();
+  const { share } = await shareDefaults();
   const plan: MealPlan = {
     _id: crypto.randomUUID(),
     userId,
     title: input.title.trim(),
     startDate: input.startDate,
     slots: input.slots ?? [],
+    householdId: share.householdId,
+    visibility: share.visibility,
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -302,7 +334,8 @@ export async function updateMealPlan(
   },
 ): Promise<MealPlan> {
   const userId = await requireUserId();
-  const existing = assertOwned(await db.mealPlans.get(id), userId, 'Plan');
+  const household = await getCachedHousehold();
+  const existing = assertAccessible(await db.mealPlans.get(id), userId, household, 'Plan');
   if (existing.deletedAt) {
     throw new Error('Plan introuvable');
   }
@@ -336,8 +369,9 @@ export function buildMealSlot(input: {
 
 export async function softDeleteMealPlan(id: string): Promise<void> {
   const userId = await requireUserId();
+  const household = await getCachedHousehold();
   const existing = await db.mealPlans.get(id);
-  if (!existing || existing.userId !== userId) return;
+  if (!existing || !canAccessDoc(existing, userId, household)) return;
   const updated: MealPlan = {
     ...existing,
     deletedAt: nowIso(),
@@ -355,6 +389,11 @@ export async function createShoppingList(input: {
 }): Promise<ShoppingList> {
   const userId = await requireUserId();
   const now = nowIso();
+  const { household, share } = await shareDefaults();
+  const memberIds =
+    share.visibility === 'household' && household?.household
+      ? [...household.household.memberIds]
+      : [userId];
   const list: ShoppingList = {
     _id: crypto.randomUUID(),
     userId,
@@ -362,7 +401,9 @@ export async function createShoppingList(input: {
     mealPlanId: input.mealPlanId ?? null,
     status: 'open',
     items: input.items ?? [],
-    memberIds: [userId],
+    memberIds,
+    householdId: share.householdId,
+    visibility: share.visibility,
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -383,7 +424,8 @@ export async function updateShoppingList(
   },
 ): Promise<ShoppingList> {
   const userId = await requireUserId();
-  const existing = assertOwned(await db.shoppingLists.get(id), userId, 'Liste');
+  const household = await getCachedHousehold();
+  const existing = assertAccessible(await db.shoppingLists.get(id), userId, household, 'Liste');
   if (existing.deletedAt) {
     throw new Error('Liste introuvable');
   }
@@ -407,7 +449,8 @@ export async function toggleShoppingItem(
   checked?: boolean,
 ): Promise<ShoppingList> {
   const userId = await requireUserId();
-  const existing = assertOwned(await db.shoppingLists.get(listId), userId, 'Liste');
+  const household = await getCachedHousehold();
+  const existing = assertAccessible(await db.shoppingLists.get(listId), userId, household, 'Liste');
   if (existing.deletedAt) {
     throw new Error('Liste introuvable');
   }
@@ -420,6 +463,7 @@ export async function toggleShoppingItem(
       checked: nextChecked,
       checkedAt: nextChecked ? now : null,
       updatedAt: now,
+      updatedBy: userId,
     };
   });
   return updateShoppingList(listId, { items });
@@ -430,7 +474,8 @@ export async function addExtraItemToList(
   item: ShoppingListItem,
 ): Promise<ShoppingList> {
   const userId = await requireUserId();
-  const existing = assertOwned(await db.shoppingLists.get(listId), userId, 'Liste');
+  const household = await getCachedHousehold();
+  const existing = assertAccessible(await db.shoppingLists.get(listId), userId, household, 'Liste');
   if (existing.deletedAt) {
     throw new Error('Liste introuvable');
   }
@@ -443,6 +488,7 @@ export async function addExtraItemToList(
     row.unit === item.unit;
 
   const existingExtra = existing.items.find(keyMatch);
+  const stamped: ShoppingListItem = { ...item, updatedBy: userId };
   let items: ShoppingListItem[];
   if (existingExtra) {
     items = existing.items.map((row) =>
@@ -453,13 +499,14 @@ export async function addExtraItemToList(
             nameSnapshot: item.nameSnapshot,
             category: item.category,
             updatedAt: nowIso(),
+            updatedBy: userId,
             checked: false,
             checkedAt: null,
           }
         : row,
     );
   } else {
-    items = [...existing.items, item];
+    items = [...existing.items, stamped];
   }
 
   return updateShoppingList(listId, { items });
@@ -471,7 +518,8 @@ function roundQtyLocal(value: number): number {
 
 export async function removeShoppingItem(listId: string, itemId: string): Promise<ShoppingList> {
   const userId = await requireUserId();
-  const existing = assertOwned(await db.shoppingLists.get(listId), userId, 'Liste');
+  const household = await getCachedHousehold();
+  const existing = assertAccessible(await db.shoppingLists.get(listId), userId, household, 'Liste');
   if (existing.deletedAt) {
     throw new Error('Liste introuvable');
   }
@@ -502,7 +550,8 @@ export async function updateShoppingItemFields(
     throw new Error('Unité invalide');
   }
   const userId = await requireUserId();
-  const existing = assertOwned(await db.shoppingLists.get(listId), userId, 'Liste');
+  const household = await getCachedHousehold();
+  const existing = assertAccessible(await db.shoppingLists.get(listId), userId, household, 'Liste');
   if (existing.deletedAt) {
     throw new Error('Liste introuvable');
   }
@@ -514,6 +563,7 @@ export async function updateShoppingItemFields(
       quantity: patch.quantity != null ? roundQtyLocal(patch.quantity) : item.quantity,
       unit: patch.unit != null ? patch.unit.trim() : item.unit,
       updatedAt: now,
+      updatedBy: userId,
     };
   });
   return updateShoppingList(listId, { items });
@@ -521,8 +571,9 @@ export async function updateShoppingItemFields(
 
 export async function softDeleteShoppingList(id: string): Promise<void> {
   const userId = await requireUserId();
+  const household = await getCachedHousehold();
   const existing = await db.shoppingLists.get(id);
-  if (!existing || existing.userId !== userId) return;
+  if (!existing || !canAccessDoc(existing, userId, household)) return;
   const updated: ShoppingList = {
     ...existing,
     deletedAt: nowIso(),
@@ -531,4 +582,115 @@ export async function softDeleteShoppingList(id: string): Promise<void> {
   };
   await db.shoppingLists.put(updated);
   await queueMutation('shopping_lists', 'delete', updated);
+}
+
+/** Change Perso ↔ Foyer sur une entité syncable. Cascade produits user pour les recettes. */
+export async function setEntityVisibility(
+  entity: 'recipes' | 'meal_plans' | 'shopping_lists' | 'products',
+  id: string,
+  visibility: Visibility,
+): Promise<void> {
+  const userId = await requireUserId();
+  const household = await getCachedHousehold();
+  if (visibility === 'household' && !household?.household) {
+    throw new Error('Rejoins un foyer pour partager');
+  }
+
+  const householdId = visibility === 'household' ? household!.household._id : null;
+  const now = nowIso();
+
+  if (entity === 'recipes') {
+    const existing = assertAccessible(await db.recipes.get(id), userId, household, 'Recette');
+    const updated: Recipe = {
+      ...existing,
+      visibility,
+      householdId,
+      updatedAt: now,
+      rev: existing.rev + 1,
+    };
+    await db.recipes.put(updated);
+    await queueMutation('recipes', 'update', updated);
+
+    // Cascade : produits user référencés deviennent household pour le pull des membres
+    if (visibility === 'household') {
+      for (const ing of existing.ingredients) {
+        if (ing.productSource !== 'user') continue;
+        const product = await db.products.get(ing.productId);
+        if (!product || product.deletedAt || !canAccessDoc(product, userId, household)) continue;
+        if (product.visibility === 'household' && product.householdId === householdId) continue;
+        const nextProduct: Product = {
+          ...product,
+          visibility: 'household',
+          householdId,
+          updatedAt: now,
+          rev: product.rev + 1,
+        };
+        await db.products.put(nextProduct);
+        await queueMutation('products', 'update', nextProduct);
+      }
+    }
+    return;
+  }
+
+  if (entity === 'meal_plans') {
+    const existing = assertAccessible(await db.mealPlans.get(id), userId, household, 'Plan');
+    const updated: MealPlan = {
+      ...existing,
+      visibility,
+      householdId,
+      updatedAt: now,
+      rev: existing.rev + 1,
+    };
+    await db.mealPlans.put(updated);
+    await queueMutation('meal_plans', 'update', updated);
+    return;
+  }
+
+  if (entity === 'shopping_lists') {
+    const existing = assertAccessible(await db.shoppingLists.get(id), userId, household, 'Liste');
+    const memberIds =
+      visibility === 'household' && household?.household
+        ? [...household.household.memberIds]
+        : [existing.userId];
+    const updated: ShoppingList = {
+      ...existing,
+      visibility,
+      householdId,
+      memberIds,
+      updatedAt: now,
+      rev: existing.rev + 1,
+    };
+    await db.shoppingLists.put(updated);
+    await queueMutation('shopping_lists', 'update', updated);
+
+    if (visibility === 'household') {
+      for (const item of existing.items) {
+        if (item.productSource !== 'user') continue;
+        const product = await db.products.get(item.productId);
+        if (!product || product.deletedAt || !canAccessDoc(product, userId, household)) continue;
+        if (product.visibility === 'household' && product.householdId === householdId) continue;
+        const nextProduct: Product = {
+          ...product,
+          visibility: 'household',
+          householdId,
+          updatedAt: now,
+          rev: product.rev + 1,
+        };
+        await db.products.put(nextProduct);
+        await queueMutation('products', 'update', nextProduct);
+      }
+    }
+    return;
+  }
+
+  const existing = assertAccessible(await db.products.get(id), userId, household, 'Produit');
+  const updated: Product = {
+    ...existing,
+    visibility,
+    householdId,
+    updatedAt: now,
+    rev: existing.rev + 1,
+  };
+  await db.products.put(updated);
+  await queueMutation('products', 'update', updated);
 }

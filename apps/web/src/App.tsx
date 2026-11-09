@@ -3,6 +3,8 @@ import { AuthProvider } from './auth/AuthProvider';
 import { AppLayout } from './components/AppLayout';
 import { RequireAuth } from './components/RequireAuth';
 import { HomePage } from './pages/HomePage';
+import { HouseholdPage } from './pages/HouseholdPage';
+import { JoinHouseholdPage } from './pages/JoinHouseholdPage';
 import { LoginPage } from './pages/LoginPage';
 import { MealPlansPage } from './pages/MealPlansPage';
 import { ProductsPage } from './pages/ProductsPage';
@@ -17,6 +19,7 @@ export function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/rejoindre" element={<JoinHouseholdPage />} />
           <Route element={<RequireAuth />}>
             <Route element={<AppLayout />}>
               <Route index element={<HomePage />} />
@@ -24,6 +27,7 @@ export function App() {
               <Route path="recettes" element={<RecipesPage />} />
               <Route path="plans" element={<MealPlansPage />} />
               <Route path="liste" element={<ShoppingListPage />} />
+              <Route path="foyer" element={<HouseholdPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

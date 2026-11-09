@@ -61,17 +61,13 @@ function toUserHit(item: Product): ProductHit {
   };
 }
 
-/** Fusionne catalogue + produits user (non deleted), dédupliqués par nameNormalized (user prioritaire). */
+/** Fusionne catalogue + produits user locaux (perso + foyer), dédupliqués par nameNormalized. */
 export async function loadProductUniverse(): Promise<ProductHit[]> {
   const userId = await getSessionUserId();
   const [catalog, products] = await Promise.all([
     db.catalogProducts.toArray(),
     userId
-      ? db.products
-          .where('userId')
-          .equals(userId)
-          .filter((p) => p.deletedAt == null)
-          .toArray()
+      ? db.products.filter((p) => p.deletedAt == null).toArray()
       : Promise.resolve([] as Product[]),
   ]);
 

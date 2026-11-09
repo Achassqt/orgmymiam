@@ -1,5 +1,12 @@
-import type { AuthResponse, AuthTokens, CatalogResponse, SyncPullResponse, SyncPushResponse } from '@orgmymiam/shared';
-import type { SyncPushMutation } from '@orgmymiam/shared';
+import type {
+  AuthResponse,
+  AuthTokens,
+  CatalogResponse,
+  HouseholdResponse,
+  SyncPullResponse,
+  SyncPushResponse,
+  SyncPushMutation,
+} from '@orgmymiam/shared';
 import {
   clearUserScopedLocalData,
   getMeta,
@@ -205,4 +212,36 @@ export async function pushMutations(
 export async function pullChanges(deviceId: string, since: string): Promise<SyncPullResponse> {
   const qs = new URLSearchParams({ deviceId, since });
   return apiRequest<SyncPullResponse>(`/sync/pull?${qs.toString()}`);
+}
+
+export async function createHouseholdRequest(name: string): Promise<HouseholdResponse> {
+  return apiRequest<HouseholdResponse>('/households', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function joinHouseholdRequest(code: string): Promise<HouseholdResponse> {
+  return apiRequest<HouseholdResponse>('/households/join', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function fetchMyHousehold(): Promise<HouseholdResponse> {
+  return apiRequest<HouseholdResponse>('/households/me');
+}
+
+export async function leaveHouseholdRequest(): Promise<{ left: true; dissolved: boolean }> {
+  return apiRequest<{ left: true; dissolved: boolean }>('/households/leave', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export async function rotateHouseholdCodeRequest(): Promise<HouseholdResponse> {
+  return apiRequest<HouseholdResponse>('/households/rotate-code', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 }

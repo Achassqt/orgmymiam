@@ -10,8 +10,19 @@ import {
   createShoppingList,
   updateShoppingList,
 } from './crud';
+import { getCachedHousehold } from './household';
 import type { ProductHit } from './productSearch';
 import { categoryLabel } from './productSearch';
+
+function canSee(
+  row: { userId: string; visibility?: string; householdId?: string | null },
+  userId: string | null,
+  householdId: string | null,
+): boolean {
+  if (!userId) return true;
+  if (row.userId === userId) return true;
+  return row.visibility === 'household' && !!householdId && row.householdId === householdId;
+}
 
 export interface ProductMeta {
   name: string;
@@ -30,8 +41,10 @@ export async function lookupProductMeta(
     }
   } else {
     const userId = await getSessionUserId();
+    const household = await getCachedHousehold();
+    const householdId = household?.household._id ?? null;
     const item = await db.products.get(productId);
-    if (item && (!userId || item.userId === userId)) {
+    if (item && canSee(item, userId, householdId)) {
       return { name: item.name, category: item.category, defaultUnit: item.defaultUnit };
     }
   }
@@ -49,8 +62,10 @@ function nowIso(): string {
 /** Construit les lignes consolidées (origin meal) depuis un meal plan. */
 export async function buildMealItemsFromPlan(mealPlanId: string): Promise<ShoppingListItem[]> {
   const userId = await getSessionUserId();
+  const household = await getCachedHousehold();
+  const householdId = household?.household._id ?? null;
   const plan = await db.mealPlans.get(mealPlanId);
-  if (!plan || plan.deletedAt || (userId && plan.userId !== userId)) {
+  if (!plan || plan.deletedAt || !canSee(plan, userId, householdId)) {
     throw new Error('Plan de repas introuvable');
   }
 
@@ -68,7 +83,7 @@ export async function buildMealItemsFromPlan(mealPlanId: string): Promise<Shoppi
 
   for (const slot of plan.slots) {
     const recipe = await db.recipes.get(slot.recipeId);
-    if (!recipe || recipe.deletedAt || (userId && recipe.userId !== userId)) continue;
+    if (!recipe || recipe.deletedAt || !canSee(recipe, userId, householdId)) continue;
 
     const baseServings = recipe.servings > 0 ? recipe.servings : 1;
     const targetServings = slot.servingsOverride ?? recipe.servings;
