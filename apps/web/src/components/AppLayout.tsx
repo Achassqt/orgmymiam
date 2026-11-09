@@ -1,6 +1,8 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '../auth/AuthProvider';
 import { useNewMemberToast } from '../hooks/useNewMemberToast';
+import { homeGreeting } from '../lib/homeHub';
 import { BurgerDrawer } from './BurgerDrawer';
 import { OnboardingOverlay } from './OnboardingOverlay';
 import { PwaInstallBanner } from './PwaInstallBanner';
@@ -100,12 +102,23 @@ const NAV: Array<{
 export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const burgerRef = useRef<HTMLButtonElement>(null);
+  const location = useLocation();
+  const { session } = useAuth();
+  const isHome = location.pathname === '/';
+  const greeting = homeGreeting(session?.user.displayName);
   useNewMemberToast();
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <p className="brand">OrgMyMiam</p>
+      <header className={isHome ? 'topbar topbar-home' : 'topbar'}>
+        {isHome ? (
+          <div className="home-greeting">
+            <h1 className="home-greeting-title">{greeting.title}</h1>
+            <p className="home-greeting-sub">{greeting.subtitle}</p>
+          </div>
+        ) : (
+          <p className="brand">OrgMyMiam</p>
+        )}
         <button
           ref={burgerRef}
           type="button"
