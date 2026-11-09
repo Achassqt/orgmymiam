@@ -62,6 +62,13 @@ export const META_KEYS = {
   lastSyncError: 'lastSyncError',
   lastSyncStatus: 'lastSyncStatus',
   lastSyncNotice: 'lastSyncNotice',
+  /**
+   * Map userId → true : onboarding cartoon déjà vu (survit au logout).
+   * Non inclus dans USER_SCOPED_META_KEYS.
+   */
+  onboardingDoneBy: 'onboardingDoneBy',
+  /** Bandeau PWA « Ajouter à l’écran d’accueil » dismissé (appareil). */
+  pwaInstallDismissed: 'pwaInstallDismissed',
 } as const;
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';

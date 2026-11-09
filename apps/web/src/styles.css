@@ -1305,3 +1305,172 @@ textarea {
 .ptr-label {
   font-weight: 600;
 }
+
+/* —— Toasts (copier / nouveau membre) —— */
+
+.toast-stack {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-h) + 0.85rem);
+  transform: translateX(-50%);
+  z-index: 60;
+  display: grid;
+  gap: 0.45rem;
+  width: min(22rem, calc(100vw - 1.5rem));
+  pointer-events: none;
+}
+
+.app-toast {
+  margin: 0;
+  padding: 0.65rem 0.9rem;
+  border-radius: 1rem;
+  background: rgba(30, 27, 75, 0.92);
+  color: #fff8ef;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: var(--shadow);
+  animation: toast-in 0.28s var(--ease-out);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* —— Onboarding cartoon —— */
+
+.onboarding-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(30, 27, 75, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.onboarding-card {
+  position: relative;
+  width: min(22rem, 100%);
+  padding: 1.35rem 1.25rem 1.25rem;
+  border-radius: calc(var(--radius) + 0.35rem);
+  background:
+    radial-gradient(circle at 88% 12%, rgba(255, 255, 255, 0.55) 0 4px, transparent 5px),
+    linear-gradient(160deg, #ffe566 0%, #ffd43b 45%, #fff8ef 100%);
+  border: 3px solid rgba(30, 27, 75, 0.12);
+  box-shadow: var(--shadow-pop);
+  text-align: center;
+}
+
+.onboarding-skip {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+}
+
+.onboarding-illo {
+  display: grid;
+  place-items: center;
+  margin: 0.25rem auto 0.35rem;
+}
+
+.onboarding-step {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.onboarding-card h2 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+}
+
+.onboarding-actions {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.onboarding-actions .primary-btn,
+.onboarding-actions .ghost-btn {
+  width: 100%;
+  text-decoration: none;
+  text-align: center;
+}
+
+/* —— PWA install banner —— */
+
+.pwa-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0.85rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.82);
+  border: 2px solid rgba(59, 130, 246, 0.22);
+  box-shadow: 0 4px 0 rgba(30, 27, 75, 0.06);
+}
+
+.pwa-banner-copy {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.pwa-banner-copy strong {
+  font-size: 0.88rem;
+  font-family: var(--font-display);
+}
+
+.pwa-banner-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.pwa-install-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+/* —— Courses : qui a coché —— */
+
+.checked-by-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.2rem;
+  min-width: 1.45rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  width: fit-content;
+}

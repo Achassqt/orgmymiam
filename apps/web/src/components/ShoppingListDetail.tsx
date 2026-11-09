@@ -18,6 +18,8 @@ import {
   regenerateMealItems,
 } from '../data/shoppingList';
 import { db } from '../db/database';
+import { useHousehold } from '../hooks/useHousehold';
+import { initialsFromName } from '../lib/initials';
 import { formatQuantity } from '../lib/units';
 import { runSync } from '../sync/engine';
 import { ProductSearchBox } from './ProductSearchBox';
@@ -35,7 +37,12 @@ type PendingDraft =
 
 export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) {
   const { session } = useAuth();
+  const { members } = useHousehold();
   const userId = session?.user._id;
+  const memberById = useMemo(
+    () => Object.fromEntries(members.map((m) => [m._id, m])),
+    [members],
+  );
   const list = useLiveQuery(async () => {
     const row = await db.shoppingLists.get(listId);
     if (!row || row.deletedAt) return undefined;
@@ -338,6 +345,14 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                         {formatQuantity(item.quantity, item.unit)}
                         {item.origin === 'extra' ? ' · ajouté' : ''}
                       </span>
+                      {item.checked && item.updatedBy && memberById[item.updatedBy] ? (
+                        <span
+                          className="checked-by-chip"
+                          title={`Coché par ${memberById[item.updatedBy]!.displayName}`}
+                        >
+                          {initialsFromName(memberById[item.updatedBy]!.displayName)}
+                        </span>
+                      ) : null}
                     </span>
                   </label>
                   <div className="shop-item-actions">
