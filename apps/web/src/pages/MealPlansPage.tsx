@@ -1,20 +1,27 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../auth/AuthProvider';
 import { MealPlanEditor } from '../components/MealPlanEditor';
 import { softDeleteMealPlan } from '../data/crud';
 import { db } from '../db/database';
 
 export function MealPlansPage() {
+  const { session } = useAuth();
+  const userId = session?.user._id;
   const [searchParams, setSearchParams] = useSearchParams();
   const plans =
     useLiveQuery(
       () =>
-        db.mealPlans
-          .filter((p) => p.deletedAt == null)
-          .reverse()
-          .sortBy('updatedAt'),
-      [],
+        userId
+          ? db.mealPlans
+              .where('userId')
+              .equals(userId)
+              .filter((p) => p.deletedAt == null)
+              .reverse()
+              .sortBy('updatedAt')
+          : [],
+      [userId],
     ) ?? [];
   const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
   const [selectedId, setSelectedId] = useState<string | null>(null);

@@ -5,7 +5,7 @@ import {
   type ShoppingList,
   type ShoppingListItem,
 } from '@orgmymiam/shared';
-import { db } from '../db/database';
+import { db, getSessionUserId } from '../db/database';
 import {
   createShoppingList,
   updateShoppingList,
@@ -29,8 +29,9 @@ export async function lookupProductMeta(
       return { name: item.name, category: item.category, defaultUnit: item.defaultUnit };
     }
   } else {
+    const userId = await getSessionUserId();
     const item = await db.products.get(productId);
-    if (item) {
+    if (item && (!userId || item.userId === userId)) {
       return { name: item.name, category: item.category, defaultUnit: item.defaultUnit };
     }
   }
@@ -47,8 +48,9 @@ function nowIso(): string {
 
 /** Construit les lignes consolidées (origin meal) depuis un meal plan. */
 export async function buildMealItemsFromPlan(mealPlanId: string): Promise<ShoppingListItem[]> {
+  const userId = await getSessionUserId();
   const plan = await db.mealPlans.get(mealPlanId);
-  if (!plan || plan.deletedAt) {
+  if (!plan || plan.deletedAt || (userId && plan.userId !== userId)) {
     throw new Error('Plan de repas introuvable');
   }
 
@@ -66,7 +68,7 @@ export async function buildMealItemsFromPlan(mealPlanId: string): Promise<Shoppi
 
   for (const slot of plan.slots) {
     const recipe = await db.recipes.get(slot.recipeId);
-    if (!recipe || recipe.deletedAt) continue;
+    if (!recipe || recipe.deletedAt || (userId && recipe.userId !== userId)) continue;
 
     const baseServings = recipe.servings > 0 ? recipe.servings : 1;
     const targetServings = slot.servingsOverride ?? recipe.servings;
@@ -118,8 +120,9 @@ export async function generateShoppingListFromMealPlan(input: {
   mealPlanId: string;
   title?: string;
 }): Promise<ShoppingList> {
+  const userId = await getSessionUserId();
   const plan = await db.mealPlans.get(input.mealPlanId);
-  if (!plan || plan.deletedAt) {
+  if (!plan || plan.deletedAt || (userId && plan.userId !== userId)) {
     throw new Error('Plan de repas introuvable');
   }
 
@@ -136,8 +139,9 @@ export async function generateShoppingListFromMealPlan(input: {
 
 /** Régénère les lignes meal en conservant les extras (et le cochage extras). */
 export async function regenerateMealItems(listId: string): Promise<ShoppingList> {
+  const userId = await getSessionUserId();
   const list = await db.shoppingLists.get(listId);
-  if (!list || list.deletedAt) {
+  if (!list || list.deletedAt || (userId && list.userId !== userId)) {
     throw new Error('Liste introuvable');
   }
   if (!list.mealPlanId) {

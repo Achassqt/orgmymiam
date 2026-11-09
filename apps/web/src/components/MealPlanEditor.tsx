@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { MEAL_TYPES, type MealPlan, type MealSlot, type MealType } from '@orgmymiam/shared';
+import { useAuth } from '../auth/AuthProvider';
 import { buildMealSlot, createMealPlan, updateMealPlan } from '../data/crud';
 import { MEAL_TYPE_LABELS } from '../data/productSearch';
 import { db } from '../db/database';
@@ -26,10 +27,19 @@ function personsLabel(n: number): string {
 }
 
 export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) {
+  const { session } = useAuth();
+  const userId = session?.user._id;
   const recipes =
     useLiveQuery(
-      () => db.recipes.filter((r) => r.deletedAt == null).sortBy('title'),
-      [],
+      () =>
+        userId
+          ? db.recipes
+              .where('userId')
+              .equals(userId)
+              .filter((r) => r.deletedAt == null)
+              .sortBy('title')
+          : [],
+      [userId],
     ) ?? [];
 
   const [title, setTitle] = useState(plan?.title ?? '');

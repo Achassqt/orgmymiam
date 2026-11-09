@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useAuth } from '../auth/AuthProvider';
 import { MEAL_TYPE_LABELS } from '../data/productSearch';
 import { db } from '../db/database';
 
@@ -8,22 +9,43 @@ function todayIsoDate(): string {
 }
 
 export function HomePage() {
+  const { session } = useAuth();
+  const userId = session?.user._id;
   const today = todayIsoDate();
   const recipesCount =
-    useLiveQuery(() => db.recipes.filter((r) => r.deletedAt == null).count(), []) ?? 0;
+    useLiveQuery(
+      () =>
+        userId
+          ? db.recipes.where('userId').equals(userId).filter((r) => r.deletedAt == null).count()
+          : 0,
+      [userId],
+    ) ?? 0;
   const openLists =
     useLiveQuery(
       () =>
-        db.shoppingLists
-          .filter((l) => l.deletedAt == null && l.status === 'open')
-          .reverse()
-          .sortBy('updatedAt'),
-      [],
+        userId
+          ? db.shoppingLists
+              .where('userId')
+              .equals(userId)
+              .filter((l) => l.deletedAt == null && l.status === 'open')
+              .reverse()
+              .sortBy('updatedAt')
+          : [],
+      [userId],
     ) ?? [];
 
   const nextMeals = useLiveQuery(async () => {
-    const plans = await db.mealPlans.filter((p) => p.deletedAt == null).toArray();
-    const recipes = await db.recipes.filter((r) => r.deletedAt == null).toArray();
+    if (!userId) return [];
+    const plans = await db.mealPlans
+      .where('userId')
+      .equals(userId)
+      .filter((p) => p.deletedAt == null)
+      .toArray();
+    const recipes = await db.recipes
+      .where('userId')
+      .equals(userId)
+      .filter((r) => r.deletedAt == null)
+      .toArray();
     const titleById = Object.fromEntries(recipes.map((r) => [r._id, r.title]));
     const slots = plans
       .flatMap((plan) =>
@@ -40,7 +62,7 @@ export function HomePage() {
       )
       .slice(0, 3);
     return slots;
-  }, [today]);
+  }, [today, userId]);
 
   const latestList = openLists[0] ?? null;
 

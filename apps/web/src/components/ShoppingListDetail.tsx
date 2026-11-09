@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useAuth } from '../auth/AuthProvider';
 import {
   addExtraItemToList,
   createProduct,
@@ -30,11 +31,17 @@ type PendingDraft =
   | { kind: 'create'; name: string; quantity: string; unit: string };
 
 export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) {
-  const list = useLiveQuery(() => db.shoppingLists.get(listId), [listId]);
+  const { session } = useAuth();
+  const userId = session?.user._id;
+  const list = useLiveQuery(async () => {
+    const row = await db.shoppingLists.get(listId);
+    if (!row || (userId && row.userId !== userId)) return undefined;
+    return row;
+  }, [listId, userId]);
   const planInfo = useLiveQuery(async () => {
     if (!list?.mealPlanId) return null;
     const plan = await db.mealPlans.get(list.mealPlanId);
-    if (!plan) return null;
+    if (!plan || (userId && plan.userId !== userId)) return null;
     const servings = plan.slots
       .map((slot) => slot.servingsOverride)
       .filter((n): n is number => n != null && n > 0);
@@ -47,7 +54,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
           ? `Quantités pour ${unique[0]} personne${unique[0] === 1 ? '' : 's'} (selon le planning)`
           : 'Quantités selon les portions de chaque repas du planning',
     };
-  }, [list?.mealPlanId]);
+  }, [list?.mealPlanId, userId]);
 
   const [pending, setPending] = useState<PendingDraft | null>(null);
   const [busy, setBusy] = useState(false);

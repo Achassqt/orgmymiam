@@ -26,6 +26,17 @@ async function requireUserId(): Promise<string> {
   return session.user._id;
 }
 
+function assertOwned<T extends { userId: string }>(
+  row: T | undefined,
+  userId: string,
+  label: string,
+): T {
+  if (!row || row.userId !== userId) {
+    throw new Error(`${label} introuvable`);
+  }
+  return row;
+}
+
 async function queueMutation(
   entity: OutboxEntry['entity'],
   op: OutboxEntry['op'],
@@ -66,6 +77,8 @@ export async function createProduct(input: {
   }
 
   const existingUser = await db.products
+    .where('userId')
+    .equals(userId)
     .filter((p) => p.deletedAt == null && p.nameNormalized === nameNormalized)
     .first();
   if (existingUser) {
@@ -132,8 +145,9 @@ export async function adoptCatalogProduct(catalogId: string): Promise<CreateProd
 }
 
 export async function softDeleteProduct(id: string): Promise<void> {
+  const userId = await requireUserId();
   const existing = await db.products.get(id);
-  if (!existing) return;
+  if (!existing || existing.userId !== userId) return;
   const updated: Product = {
     ...existing,
     deletedAt: nowIso(),
@@ -178,8 +192,9 @@ export async function updateRecipe(
     ingredients?: RecipeIngredient[];
   },
 ): Promise<Recipe> {
-  const existing = await db.recipes.get(id);
-  if (!existing || existing.deletedAt) {
+  const userId = await requireUserId();
+  const existing = assertOwned(await db.recipes.get(id), userId, 'Recette');
+  if (existing.deletedAt) {
     throw new Error('Recette introuvable');
   }
   const updated: Recipe = {
@@ -197,8 +212,9 @@ export async function updateRecipe(
 }
 
 export async function softDeleteRecipe(id: string): Promise<void> {
+  const userId = await requireUserId();
   const existing = await db.recipes.get(id);
-  if (!existing) return;
+  if (!existing || existing.userId !== userId) return;
   const updated: Recipe = {
     ...existing,
     deletedAt: nowIso(),
@@ -285,8 +301,9 @@ export async function updateMealPlan(
     slots?: MealSlot[];
   },
 ): Promise<MealPlan> {
-  const existing = await db.mealPlans.get(id);
-  if (!existing || existing.deletedAt) {
+  const userId = await requireUserId();
+  const existing = assertOwned(await db.mealPlans.get(id), userId, 'Plan');
+  if (existing.deletedAt) {
     throw new Error('Plan introuvable');
   }
   const updated: MealPlan = {
@@ -318,8 +335,9 @@ export function buildMealSlot(input: {
 }
 
 export async function softDeleteMealPlan(id: string): Promise<void> {
+  const userId = await requireUserId();
   const existing = await db.mealPlans.get(id);
-  if (!existing) return;
+  if (!existing || existing.userId !== userId) return;
   const updated: MealPlan = {
     ...existing,
     deletedAt: nowIso(),
@@ -364,8 +382,9 @@ export async function updateShoppingList(
     items?: ShoppingListItem[];
   },
 ): Promise<ShoppingList> {
-  const existing = await db.shoppingLists.get(id);
-  if (!existing || existing.deletedAt) {
+  const userId = await requireUserId();
+  const existing = assertOwned(await db.shoppingLists.get(id), userId, 'Liste');
+  if (existing.deletedAt) {
     throw new Error('Liste introuvable');
   }
   const updated: ShoppingList = {
@@ -387,8 +406,9 @@ export async function toggleShoppingItem(
   itemId: string,
   checked?: boolean,
 ): Promise<ShoppingList> {
-  const existing = await db.shoppingLists.get(listId);
-  if (!existing || existing.deletedAt) {
+  const userId = await requireUserId();
+  const existing = assertOwned(await db.shoppingLists.get(listId), userId, 'Liste');
+  if (existing.deletedAt) {
     throw new Error('Liste introuvable');
   }
   const now = nowIso();
@@ -409,8 +429,9 @@ export async function addExtraItemToList(
   listId: string,
   item: ShoppingListItem,
 ): Promise<ShoppingList> {
-  const existing = await db.shoppingLists.get(listId);
-  if (!existing || existing.deletedAt) {
+  const userId = await requireUserId();
+  const existing = assertOwned(await db.shoppingLists.get(listId), userId, 'Liste');
+  if (existing.deletedAt) {
     throw new Error('Liste introuvable');
   }
 
@@ -449,8 +470,9 @@ function roundQtyLocal(value: number): number {
 }
 
 export async function removeShoppingItem(listId: string, itemId: string): Promise<ShoppingList> {
-  const existing = await db.shoppingLists.get(listId);
-  if (!existing || existing.deletedAt) {
+  const userId = await requireUserId();
+  const existing = assertOwned(await db.shoppingLists.get(listId), userId, 'Liste');
+  if (existing.deletedAt) {
     throw new Error('Liste introuvable');
   }
   return updateShoppingList(listId, {
@@ -479,8 +501,9 @@ export async function updateShoppingItemFields(
   if (patch.unit != null && !patch.unit.trim()) {
     throw new Error('Unité invalide');
   }
-  const existing = await db.shoppingLists.get(listId);
-  if (!existing || existing.deletedAt) {
+  const userId = await requireUserId();
+  const existing = assertOwned(await db.shoppingLists.get(listId), userId, 'Liste');
+  if (existing.deletedAt) {
     throw new Error('Liste introuvable');
   }
   const now = nowIso();
@@ -497,8 +520,9 @@ export async function updateShoppingItemFields(
 }
 
 export async function softDeleteShoppingList(id: string): Promise<void> {
+  const userId = await requireUserId();
   const existing = await db.shoppingLists.get(id);
-  if (!existing) return;
+  if (!existing || existing.userId !== userId) return;
   const updated: ShoppingList = {
     ...existing,
     deletedAt: nowIso(),

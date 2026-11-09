@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { loginRequest, logoutLocal, registerRequest } from '../api/client';
-import { db, META_KEYS, type AuthSession } from '../db/database';
+import { db, META_KEYS, setMeta, type AuthSession } from '../db/database';
 import { bindOnlineSync, runSync } from '../sync/engine';
 
 interface AuthContextValue {
@@ -38,6 +38,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     bindOnlineSync();
     setBooting(false);
   }, []);
+
+  useEffect(() => {
+    if (session?.user._id) {
+      // Migre les sessions déjà présentes sans lastUserId (évite purge mono-compte).
+      void setMeta(META_KEYS.lastUserId, session.user._id);
+    }
+  }, [session?.user._id]);
 
   useEffect(() => {
     if (session?.accessToken) {

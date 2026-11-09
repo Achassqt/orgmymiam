@@ -1,6 +1,14 @@
 import type { AuthResponse, AuthTokens, CatalogResponse, SyncPullResponse, SyncPushResponse } from '@orgmymiam/shared';
 import type { SyncPushMutation } from '@orgmymiam/shared';
-import { getMeta, META_KEYS, setMeta, type AuthSession } from '../db/database';
+import {
+  clearUserScopedLocalData,
+  getMeta,
+  hasForeignUserScopedData,
+  hasLocalUserScopedData,
+  META_KEYS,
+  setMeta,
+  type AuthSession,
+} from '../db/database';
 
 const API_BASE = '/api';
 
@@ -112,6 +120,43 @@ export async function apiRequest<T>(
   return body as T;
 }
 
+async function withLocalDataBarrier(fn: () => Promise<void>): Promise<void> {
+  // Import dynamique pour éviter un cycle ESM client ↔ engine.
+  const sync = await import('../sync/engine');
+  sync.bumpLocalDataEpoch();
+  await sync.waitForSyncIdle();
+  await fn();
+}
+
+/**
+ * Avant d’écrire une nouvelle session : purge si changement de compte
+ * ou s’il reste des données locales d’un autre user.
+ * `lastUserId` permet de reconnecter le même compte après expiry token
+ * sans perdre l’outbox offline.
+ */
+async function adoptAuthenticatedSession(session: AuthSession): Promise<AuthSession> {
+  const previous = await getMeta<AuthSession | null>(META_KEYS.auth);
+  const rememberedUserId = await getMeta<string | null>(META_KEYS.lastUserId);
+  const previousUserId = previous?.user._id ?? rememberedUserId ?? null;
+  const nextUserId = session.user._id;
+
+  const switchedUser = previousUserId != null && previousUserId !== nextUserId;
+  // Logout a déjà purgé ; si auth+lastUserId absents mais tables pleines → base orpheline.
+  const orphanLocalData =
+    previousUserId == null && (await hasLocalUserScopedData());
+  const foreignRows = await hasForeignUserScopedData(nextUserId);
+
+  if (switchedUser || orphanLocalData || foreignRows) {
+    await withLocalDataBarrier(async () => {
+      await clearUserScopedLocalData();
+    });
+  }
+
+  await setMeta(META_KEYS.auth, session);
+  await setMeta(META_KEYS.lastUserId, nextUserId);
+  return session;
+}
+
 export async function registerRequest(input: {
   email: string;
   password: string;
@@ -122,9 +167,7 @@ export async function registerRequest(input: {
     { method: 'POST', body: JSON.stringify(input) },
     { auth: false },
   );
-  const session = toSession(data.user, data.tokens);
-  await setMeta(META_KEYS.auth, session);
-  return session;
+  return adoptAuthenticatedSession(toSession(data.user, data.tokens));
 }
 
 export async function loginRequest(input: {
@@ -136,13 +179,13 @@ export async function loginRequest(input: {
     { method: 'POST', body: JSON.stringify(input) },
     { auth: false },
   );
-  const session = toSession(data.user, data.tokens);
-  await setMeta(META_KEYS.auth, session);
-  return session;
+  return adoptAuthenticatedSession(toSession(data.user, data.tokens));
 }
 
 export async function logoutLocal(): Promise<void> {
-  await setMeta(META_KEYS.auth, null);
+  await withLocalDataBarrier(async () => {
+    await clearUserScopedLocalData();
+  });
 }
 
 export async function fetchCatalog(sinceVersion = 0): Promise<CatalogResponse> {

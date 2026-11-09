@@ -1,28 +1,39 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useAuth } from '../auth/AuthProvider';
 import { ShoppingListDetail } from '../components/ShoppingListDetail';
 import { createShoppingList, softDeleteShoppingList } from '../data/crud';
 import { generateShoppingListFromMealPlan } from '../data/shoppingList';
 import { db } from '../db/database';
 
 export function ShoppingListPage() {
+  const { session } = useAuth();
+  const userId = session?.user._id;
   const lists =
     useLiveQuery(
       () =>
-        db.shoppingLists
-          .filter((l) => l.deletedAt == null)
-          .reverse()
-          .sortBy('updatedAt'),
-      [],
+        userId
+          ? db.shoppingLists
+              .where('userId')
+              .equals(userId)
+              .filter((l) => l.deletedAt == null)
+              .reverse()
+              .sortBy('updatedAt')
+          : [],
+      [userId],
     ) ?? [];
   const plans =
     useLiveQuery(
       () =>
-        db.mealPlans
-          .filter((p) => p.deletedAt == null)
-          .reverse()
-          .sortBy('updatedAt'),
-      [],
+        userId
+          ? db.mealPlans
+              .where('userId')
+              .equals(userId)
+              .filter((p) => p.deletedAt == null)
+              .reverse()
+              .sortBy('updatedAt')
+          : [],
+      [userId],
     ) ?? [];
 
   const [selectedId, setSelectedId] = useState<string | null>(null);

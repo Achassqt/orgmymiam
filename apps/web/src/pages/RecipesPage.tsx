@@ -1,18 +1,25 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useAuth } from '../auth/AuthProvider';
 import { RecipeEditor } from '../components/RecipeEditor';
 import { softDeleteRecipe } from '../data/crud';
 import { db } from '../db/database';
 
 export function RecipesPage() {
+  const { session } = useAuth();
+  const userId = session?.user._id;
   const recipes =
     useLiveQuery(
       () =>
-        db.recipes
-          .filter((r) => r.deletedAt == null)
-          .reverse()
-          .sortBy('updatedAt'),
-      [],
+        userId
+          ? db.recipes
+              .where('userId')
+              .equals(userId)
+              .filter((r) => r.deletedAt == null)
+              .reverse()
+              .sortBy('updatedAt')
+          : [],
+      [userId],
     ) ?? [];
   const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
   const [selectedId, setSelectedId] = useState<string | null>(null);
