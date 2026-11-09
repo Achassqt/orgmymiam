@@ -7,13 +7,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.svg', 'fonts/*.woff2'],
       manifest: {
         name: 'OrgMyMiam',
         short_name: 'OrgMyMiam',
         description: 'Planification de repas et liste de courses, même hors ligne',
-        theme_color: '#3B82F6',
-        background_color: '#FFF8EF',
+        theme_color: '#1F3D2B',
+        background_color: '#F6F1E7',
         display: 'standalone',
         lang: 'fr',
         start_url: '/',
@@ -38,6 +38,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
