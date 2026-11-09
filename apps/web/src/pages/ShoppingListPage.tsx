@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useAuth } from '../auth/AuthProvider';
 import { EmptyState } from '../components/EmptyState';
+import { TrashIcon } from '../components/icons';
 import { PullToRefresh } from '../components/PullToRefresh';
 import { ShoppingListDetail } from '../components/ShoppingListDetail';
 import { HouseholdBadge } from '../components/VisibilityToggle';
@@ -209,10 +210,15 @@ export function ShoppingListPage() {
                     </button>
                     <button
                       type="button"
-                      className="ghost-btn"
-                      onClick={() => void softDeleteShoppingList(list._id)}
+                      className="icon-btn soft"
+                      aria-label={`Supprimer ${list.title}`}
+                      title="Supprimer"
+                      onClick={() => {
+                        if (!window.confirm(`Supprimer « ${list.title} » ?`)) return;
+                        void softDeleteShoppingList(list._id);
+                      }}
                     >
-                      Suppr.
+                      <TrashIcon />
                     </button>
                   </li>
                 );

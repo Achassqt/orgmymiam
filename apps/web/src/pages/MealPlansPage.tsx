@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { EmptyState } from '../components/EmptyState';
+import { TrashIcon } from '../components/icons';
 import { MealPlanEditor } from '../components/MealPlanEditor';
 import { PullToRefresh } from '../components/PullToRefresh';
 import { HouseholdBadge } from '../components/VisibilityToggle';
@@ -115,10 +116,15 @@ export function MealPlansPage() {
                 </button>
                 <button
                   type="button"
-                  className="ghost-btn"
-                  onClick={() => void softDeleteMealPlan(plan._id)}
+                  className="icon-btn soft"
+                  aria-label={`Supprimer ${plan.title}`}
+                  title="Supprimer"
+                  onClick={() => {
+                    if (!window.confirm(`Supprimer « ${plan.title} » ?`)) return;
+                    void softDeleteMealPlan(plan._id);
+                  }}
                 >
-                  Suppr.
+                  <TrashIcon />
                 </button>
               </li>
             ))}
