@@ -263,6 +263,14 @@ input {
   text-underline-offset: 0.15em;
 }
 
+.sync-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
 .sync-indicator {
   display: inline-flex;
   align-items: center;
@@ -270,10 +278,40 @@ input {
   padding: 0.35rem 0.65rem;
   font-size: 0.78rem;
   font-weight: 700;
-  max-width: 14rem;
+  max-width: 15rem;
+}
+
+.sync-label {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.sync-toast {
+  margin: 0;
+  max-width: 15rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.55rem;
+  background: rgba(20, 35, 29, 0.88);
+  color: #f3faf6;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.sync-dot.pulse {
+  animation: sync-pulse 1s ease-in-out infinite;
+}
+
+@keyframes sync-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
 }
 
 .sync-indicator.tone-ok {

@@ -21,6 +21,10 @@ export interface OutboxEntry {
   createdAt: string;
   attempts: number;
   lastError?: string;
+  /** ISO — ne pas retenter avant cette date */
+  nextRetryAt?: string;
+  /** Trop d’échecs : exclu du flush automatique */
+  deadLetter?: boolean;
 }
 
 export interface AuthSession {
@@ -51,6 +55,7 @@ export const META_KEYS = {
   lastSyncAt: 'lastSyncAt',
   lastSyncError: 'lastSyncError',
   lastSyncStatus: 'lastSyncStatus',
+  lastSyncNotice: 'lastSyncNotice',
 } as const;
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';
