@@ -40,10 +40,8 @@ export function MealPlansPage() {
     <section className="page-section">
       <div className="page-heading">
         <div>
-          <h1>Plans de repas</h1>
-          <p className="lede">
-            Planifie des créneaux (date + type de repas + recette), 100 % offline.
-          </p>
+          <h1>Planning</h1>
+          <p className="lede">Organise les repas de la semaine : date, type et recette.</p>
         </div>
         <button type="button" className="primary-btn" onClick={() => setMode('create')}>
           Nouveau
@@ -51,7 +49,7 @@ export function MealPlansPage() {
       </div>
 
       {plans.length === 0 ? (
-        <p className="empty">Aucun plan — crée une semaine même sans réseau.</p>
+        <p className="empty">Aucun planning — crée ta semaine.</p>
       ) : (
         <ul className="entity-list">
           {plans.map((plan) => (

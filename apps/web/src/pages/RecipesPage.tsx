@@ -42,7 +42,7 @@ export function RecipesPage() {
       <div className="page-heading">
         <div>
           <h1>Recettes</h1>
-          <p className="lede">CRUD offline : portions, ingrédients (catalogue ou perso), notes.</p>
+          <p className="lede">Tes plats avec portions et ingrédients.</p>
         </div>
         <button type="button" className="primary-btn" onClick={() => setMode('create')}>
           Nouvelle
@@ -50,7 +50,7 @@ export function RecipesPage() {
       </div>
 
       {recipes.length === 0 ? (
-        <p className="empty">Aucune recette — crée-en une, même hors ligne.</p>
+        <p className="empty">Aucune recette — crée ta première.</p>
       ) : (
         <ul className="entity-list">
           {recipes.map((recipe) => (
@@ -65,7 +65,8 @@ export function RecipesPage() {
               >
                 <strong>{recipe.title}</strong>
                 <span className="meta">
-                  {recipe.servings} portions · {recipe.ingredients.length} ingrédient
+                  pour {recipe.servings} personne{recipe.servings === 1 ? '' : 's'} ·{' '}
+                  {recipe.ingredients.length} ingrédient
                   {recipe.ingredients.length === 1 ? '' : 's'}
                 </span>
               </button>

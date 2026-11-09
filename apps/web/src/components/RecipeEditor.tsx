@@ -9,7 +9,9 @@ import {
 } from '../data/crud';
 import { lookupProductLabel } from '../data/productSearch';
 import type { ProductHit } from '../data/productSearch';
+import { formatQuantityOf } from '../lib/units';
 import { ProductSearchBox } from './ProductSearchBox';
+import { UnitSelect } from './UnitSelect';
 
 interface DraftIngredient extends RecipeIngredient {
   key: string;
@@ -39,6 +41,7 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
   const [unit, setUnit] = useState('unité');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unitHint, setUnitHint] = useState<string | null>(null);
 
   const nameMap = useLiveQuery(async () => {
     if (!recipe) return {} as Record<string, string>;
@@ -71,7 +74,8 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
     setBusy(true);
     setError(null);
     try {
-      const ing = await resolveIngredientFromHit(hit, qty, unit);
+      const nextUnit = hit.defaultUnit || unit;
+      const ing = await resolveIngredientFromHit(hit, qty, nextUnit);
       setIngredients((prev) => [
         ...prev,
         {
@@ -83,7 +87,8 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
           name: ing.name,
         },
       ]);
-      setUnit(hit.defaultUnit);
+      setUnit(nextUnit);
+      setUnitHint(`Unité préremplie : ${nextUnit} (modifiable)`);
     } finally {
       setBusy(false);
     }
@@ -110,6 +115,7 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
           name: ing.name,
         },
       ]);
+      setUnitHint(null);
     } finally {
       setBusy(false);
     }
@@ -162,7 +168,7 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
           <input value={title} onChange={(e) => setTitle(e.target.value)} required />
         </label>
         <label>
-          Portions
+          Pour combien de personnes ?
           <input
             type="number"
             min={1}
@@ -190,10 +196,7 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
           {ingredients.map((ing) => (
             <li key={ing.key}>
               <div>
-                <strong>{ing.name}</strong>
-                <span className="meta">
-                  {ing.quantity} {ing.unit} · {ing.productSource}
-                </span>
+                <strong>{formatQuantityOf(ing.quantity, ing.unit, ing.name)}</strong>
               </div>
               <button
                 type="button"
@@ -210,14 +213,29 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
       <div className="ingredient-adder">
         <div className="qty-row">
           <label>
-            Qté
-            <input value={quantity} onChange={(e) => setQuantity(e.target.value)} inputMode="decimal" />
+            Quantité
+            <input
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              inputMode="decimal"
+              aria-describedby="recipe-qty-help"
+            />
           </label>
           <label>
             Unité
-            <input value={unit} onChange={(e) => setUnit(e.target.value)} />
+            <UnitSelect
+              value={unit}
+              onChange={(next) => {
+                setUnit(next);
+                setUnitHint(null);
+              }}
+            />
           </label>
         </div>
+        <p id="recipe-qty-help" className="field-help">
+          Ex. 400 g, 2 pièces. L’unité se préremplit quand tu choisis un produit.
+        </p>
+        {unitHint ? <p className="field-help">{unitHint}</p> : null}
         <ProductSearchBox
           busy={busy}
           compact

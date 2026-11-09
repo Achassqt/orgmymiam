@@ -75,7 +75,7 @@ export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) 
     const overrideRaw = servingsOverride.trim();
     const override = overrideRaw === '' ? null : Number(overrideRaw);
     if (overrideRaw !== '' && (!Number.isFinite(override) || (override ?? 0) <= 0)) {
-      setError('Portions override invalides');
+      setError('Nombre de personnes invalide');
       return;
     }
     setError(null);
@@ -114,7 +114,7 @@ export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) 
   return (
     <div className="editor-panel">
       <div className="editor-header">
-        <h2>{plan ? 'Modifier le plan' : 'Nouveau plan'}</h2>
+        <h2>{plan ? 'Modifier le planning' : 'Nouveau planning'}</h2>
         <button type="button" className="ghost-btn" onClick={onCancel}>
           Fermer
         </button>
@@ -152,7 +152,9 @@ export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) 
                 </strong>
                 <span className="meta">
                   {recipeTitleById[slot.recipeId] ?? 'Recette manquante'}
-                  {slot.servingsOverride != null ? ` · ${slot.servingsOverride} portions` : ''}
+                  {slot.servingsOverride != null
+                    ? ` · pour ${slot.servingsOverride} personne${slot.servingsOverride === 1 ? '' : 's'}`
+                    : ''}
                 </span>
               </div>
               <button
@@ -196,14 +198,17 @@ export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) 
           </select>
         </label>
         <label>
-          Portions (optionnel)
+          Pour combien de personnes ? (optionnel)
           <input
             inputMode="numeric"
-            placeholder="défaut recette"
+            placeholder="comme dans la recette"
             value={servingsOverride}
             onChange={(e) => setServingsOverride(e.target.value)}
           />
         </label>
+        <p className="field-help">
+          Si tu indiques un nombre, les quantités de la liste de courses seront adaptées.
+        </p>
         <div className="editor-actions wrap">
           <button type="button" className="primary-btn" onClick={addSlot} disabled={!recipeId}>
             Ajouter le créneau
@@ -222,7 +227,7 @@ export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) 
 
       <div className="editor-actions">
         <button type="button" className="primary-btn" disabled={busy} onClick={() => void onSave()}>
-          {busy ? 'Enregistrement…' : 'Enregistrer le plan'}
+          {busy ? 'Enregistrement…' : 'Enregistrer le planning'}
         </button>
       </div>
     </div>

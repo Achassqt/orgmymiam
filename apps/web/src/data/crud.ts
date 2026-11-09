@@ -455,6 +455,28 @@ export async function removeShoppingItem(listId: string, itemId: string): Promis
   });
 }
 
+/** Ajuste la quantité d’une ligne de liste (même flux outbox que les autres updates). */
+export async function updateShoppingItemQuantity(
+  listId: string,
+  itemId: string,
+  quantity: number,
+): Promise<ShoppingList> {
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    throw new Error('Quantité invalide');
+  }
+  const existing = await db.shoppingLists.get(listId);
+  if (!existing || existing.deletedAt) {
+    throw new Error('Liste introuvable');
+  }
+  const now = nowIso();
+  const items = existing.items.map((item) =>
+    item.id === itemId
+      ? { ...item, quantity: roundQtyLocal(quantity), updatedAt: now }
+      : item,
+  );
+  return updateShoppingList(listId, { items });
+}
+
 export async function softDeleteShoppingList(id: string): Promise<void> {
   const existing = await db.shoppingLists.get(id);
   if (!existing) return;

@@ -2,12 +2,9 @@ import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ProductSearchBox } from '../components/ProductSearchBox';
 import { adoptCatalogProduct, createProduct, softDeleteProduct } from '../data/crud';
-import {
-  categoryLabel,
-  loadProductUniverse,
-  type ProductHit,
-} from '../data/productSearch';
+import { categoryLabel, type ProductHit } from '../data/productSearch';
 import { db } from '../db/database';
+import { unitDisplayLabel } from '../lib/units';
 
 export function ProductsPage() {
   const products =
@@ -19,8 +16,6 @@ export function ProductsPage() {
           .sortBy('updatedAt'),
       [],
     ) ?? [];
-  const universe = useLiveQuery(() => loadProductUniverse(), []) ?? [];
-  const catalogCount = useLiveQuery(() => db.catalogProducts.count(), []) ?? 0;
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
@@ -39,11 +34,11 @@ export function ProductsPage() {
     try {
       const result = await createProduct({ name });
       if (result.status === 'reused_user') {
-        setFeedback(`Réutilisé (déjà présent) : « ${result.product.name} ».`);
+        setFeedback(`Déjà dans ta liste : « ${result.product.name} ».`);
       } else if (result.status === 'reused_catalog') {
-        setFeedback(`Issu du catalogue, ajouté à tes produits : « ${result.product.name} ».`);
+        setFeedback(`Ajouté à tes produits : « ${result.product.name} ».`);
       } else {
-        setFeedback(`Créé hors-ligne : « ${result.product.name} ».`);
+        setFeedback(`Produit créé : « ${result.product.name} ».`);
       }
     } finally {
       setBusy(false);
@@ -55,15 +50,15 @@ export function ProductsPage() {
     setFeedback(null);
     try {
       if (hit.source === 'user' && hit.userProductId) {
-        setFeedback(`Produit déjà dans ta liste : « ${hit.name} ».`);
+        setFeedback(`Déjà dans ta liste : « ${hit.name} ».`);
         return;
       }
       if (hit.source === 'catalog' && hit.catalogId) {
         const result = await adoptCatalogProduct(hit.catalogId);
         if (result.status === 'reused_user') {
-          setFeedback(`Déjà adopté : « ${result.product.name} ».`);
+          setFeedback(`Déjà dans ta liste : « ${result.product.name} ».`);
         } else {
-          setFeedback(`Catalogue adopté : « ${result.product.name} » (sync via outbox).`);
+          setFeedback(`Ajouté à tes produits : « ${result.product.name} ».`);
         }
       }
     } finally {
@@ -74,15 +69,7 @@ export function ProductsPage() {
   return (
     <section className="page-section">
       <h1>Produits</h1>
-      <p className="lede">
-        Recherche hybride catalogue + perso, anti-doublons via normalisation (accents, casse,
-        pluriels légers).
-      </p>
-
-      <p className="search-stats">
-        Index local : <strong>{universe.length}</strong> noms uniques · catalogue{' '}
-        <strong>{catalogCount}</strong> · perso <strong>{products.length}</strong>
-      </p>
+      <p className="lede">Cherche un aliment, réutilise un existant ou crée-en un nouveau.</p>
 
       <ProductSearchBox busy={busy} onCreate={handleCreate} onSelect={handleSelect} />
 
@@ -99,7 +86,7 @@ export function ProductsPage() {
       {filteredMine.length === 0 ? (
         <p className="empty">
           {products.length === 0
-            ? 'Aucun produit perso — cherche dans le catalogue ou crée-en un.'
+            ? 'Aucun produit — cherche ci-dessus ou crée ta première entrée.'
             : 'Aucun résultat pour ce filtre.'}
         </p>
       ) : (
@@ -109,10 +96,7 @@ export function ProductsPage() {
               <div>
                 <strong>{product.name}</strong>
                 <span className="meta">
-                  {categoryLabel(product.category)} · {product.defaultUnit}
-                  {product.sourceCatalogId ? ' · depuis catalogue' : ' · perso'}
-                  <br />
-                  <code>{product.nameNormalized}</code>
+                  {categoryLabel(product.category)} · {unitDisplayLabel(product.defaultUnit)}
                 </span>
               </div>
               <button

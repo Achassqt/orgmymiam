@@ -331,11 +331,15 @@ export async function runSync(reason = 'manual'): Promise<void> {
       if (conflicts > 0) {
         await setNotice(
           conflicts === 1
-            ? 'Conflit résolu (version serveur fusionnée).'
-            : `${conflicts} conflits résolus (fusion LWW).`,
+            ? 'Une version plus récente a été conservée.'
+            : `${conflicts} versions plus récentes ont été conservées.`,
         );
       } else if (deadLetters > 0) {
-        await setNotice(`${deadLetters} mutation(s) en échec définitif — voir outbox.`);
+        await setNotice(
+          deadLetters === 1
+            ? 'Un changement n’a pas pu être enregistré — réessayer.'
+            : `${deadLetters} changements n’ont pas pu être enregistrés — réessayer.`,
+        );
       } else if (remaining === 0) {
         await setNotice(null);
       }
@@ -343,7 +347,7 @@ export async function runSync(reason = 'manual'): Promise<void> {
       await setStatus('idle');
       console.debug('[sync] ok', reason);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erreur de sync';
+      const message = err instanceof Error ? err.message : 'Erreur d’enregistrement';
       await setStatus('error', message);
       scheduleRetryWakeup();
       console.warn('[sync] failed', reason, err);

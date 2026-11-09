@@ -276,9 +276,9 @@ input {
   align-items: center;
   gap: 0.4rem;
   padding: 0.35rem 0.65rem;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  max-width: 15rem;
+  max-width: min(18rem, 72vw);
 }
 
 .sync-label {
@@ -536,6 +536,42 @@ input {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
+}
+
+.field-help {
+  margin: 0.35rem 0 0.55rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.home-block {
+  margin-top: 1.25rem;
+}
+
+.home-highlight {
+  margin: 0 0 0.75rem;
+}
+
+.shop-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.qty-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.qty-edit input {
+  width: 4.5rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid rgba(20, 35, 29, 0.16);
+  border-radius: 0.55rem;
+  background: #fff;
 }
 
 .ingredient-adder,
