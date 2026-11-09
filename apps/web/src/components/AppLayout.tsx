@@ -1,11 +1,9 @@
-import type { ReactNode } from 'react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
-import { useAuth } from '../auth/AuthProvider';
-import { useHousehold } from '../hooks/useHousehold';
+import { useRef, useState, type ReactNode } from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
 import { useNewMemberToast } from '../hooks/useNewMemberToast';
+import { BurgerDrawer } from './BurgerDrawer';
 import { OnboardingOverlay } from './OnboardingOverlay';
 import { PwaInstallBanner } from './PwaInstallBanner';
-import { SyncIndicator } from './SyncIndicator';
 
 function IconHome() {
   return (
@@ -55,6 +53,20 @@ function IconCart() {
   );
 }
 
+function IconBurger() {
+  return (
+    <svg viewBox="0 0 24 24" className="burger-icon-svg" aria-hidden>
+      <path
+        d="M5 7h14M5 12h14M5 17h14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 const NAV: Array<{
   to: string;
   label: string;
@@ -68,41 +80,32 @@ const NAV: Array<{
 ];
 
 export function AppLayout() {
-  const { session, logout } = useAuth();
-  const { isMember, household } = useHousehold();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const burgerRef = useRef<HTMLButtonElement>(null);
   useNewMemberToast();
 
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="brand-block">
-          <p className="brand">OrgMyMiam</p>
-          <p className="user-line">
-            {session?.user.displayName}
-            {isMember && household ? (
-              <>
-                {' · '}
-                <Link to="/foyer" className="foyer-link">
-                  {household.name}
-                </Link>
-              </>
-            ) : (
-              <>
-                {' · '}
-                <Link to="/foyer" className="foyer-link">
-                  Foyer
-                </Link>
-              </>
-            )}
-          </p>
-        </div>
-        <div className="topbar-actions">
-          <SyncIndicator />
-          <button type="button" className="ghost-btn" onClick={() => void logout()}>
-            Déconnexion
-          </button>
-        </div>
+        <p className="brand">OrgMyMiam</p>
+        <button
+          ref={burgerRef}
+          type="button"
+          className="icon-btn burger-trigger"
+          aria-label="Ouvrir le menu"
+          aria-expanded={menuOpen}
+          aria-haspopup="dialog"
+          onClick={() => setMenuOpen(true)}
+        >
+          <IconBurger />
+        </button>
       </header>
+
+      <BurgerDrawer
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        triggerRef={burgerRef}
+      />
 
       <PwaInstallBanner />
 

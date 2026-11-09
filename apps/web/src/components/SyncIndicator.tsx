@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useSyncStatus } from '../hooks/useSyncStatus';
 
-export function SyncIndicator() {
+interface SyncIndicatorProps {
+  /** Compact row for the burger drawer */
+  compact?: boolean;
+}
+
+export function SyncIndicator({ compact = false }: SyncIndicatorProps) {
   const { online, status, outboxCount, deadLetterCount, lastError, notice, refresh } =
     useSyncStatus();
   const [showNotice, setShowNotice] = useState(false);
@@ -47,10 +52,10 @@ export function SyncIndicator() {
   }
 
   return (
-    <div className="sync-wrap">
+    <div className={compact ? 'sync-wrap sync-wrap-compact' : 'sync-wrap'}>
       <button
         type="button"
-        className={`sync-indicator tone-${tone}`}
+        className={`sync-indicator tone-${tone}${compact ? ' sync-indicator-compact' : ''}`}
         onClick={() => void refresh()}
         title={title}
         aria-live="polite"
