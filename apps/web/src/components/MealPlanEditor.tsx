@@ -13,6 +13,8 @@ interface MealPlanEditorProps {
   plan?: MealPlan | null;
   onDone: () => void;
   onCancel: () => void;
+  /** Préremplit le formulaire de créneau (Planning → Ajouter un repas). */
+  seedSlot?: { date: string; mealType: MealType } | null;
 }
 
 function addDays(isoDate: string, days: number): string {
@@ -28,7 +30,12 @@ function personsLabel(n: number): string {
   return `${n} personne${n === 1 ? '' : 's'}`;
 }
 
-export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) {
+export function MealPlanEditor({
+  plan,
+  onDone,
+  onCancel,
+  seedSlot = null,
+}: MealPlanEditorProps) {
   const { session } = useAuth();
   const userId = session?.user._id;
   const recipes =
@@ -37,11 +44,12 @@ export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) 
       [userId],
     ) ?? [];
 
+  const initialDate = seedSlot?.date ?? plan?.startDate ?? todayIsoDate();
   const [title, setTitle] = useState(plan?.title ?? '');
-  const [startDate, setStartDate] = useState(plan?.startDate ?? todayIsoDate());
+  const [startDate, setStartDate] = useState(plan?.startDate ?? initialDate);
   const [slots, setSlots] = useState(plan?.slots ?? []);
-  const [slotDate, setSlotDate] = useState(plan?.startDate ?? todayIsoDate());
-  const [mealType, setMealType] = useState<MealType>('diner');
+  const [slotDate, setSlotDate] = useState(initialDate);
+  const [mealType, setMealType] = useState<MealType>(seedSlot?.mealType ?? 'diner');
   const [recipeId, setRecipeId] = useState('');
   const [servingsOverride, setServingsOverride] = useState('');
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
@@ -53,8 +61,16 @@ export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) 
     setTitle(plan.title);
     setStartDate(plan.startDate);
     setSlots(plan.slots);
-    setSlotDate(plan.startDate);
-  }, [plan]);
+    setSlotDate(seedSlot?.date ?? plan.startDate);
+    if (seedSlot?.mealType) setMealType(seedSlot.mealType);
+  }, [plan, seedSlot]);
+
+  useEffect(() => {
+    if (plan || !seedSlot) return;
+    setStartDate(seedSlot.date);
+    setSlotDate(seedSlot.date);
+    setMealType(seedSlot.mealType);
+  }, [plan, seedSlot]);
 
   useEffect(() => {
     if (!recipeId && recipes[0]) {
