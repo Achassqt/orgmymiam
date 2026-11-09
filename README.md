@@ -4,7 +4,7 @@ PWA Offline-First de planification de repas et liste de courses.
 
 Monorepo npm workspaces :
 
-- `apps/web` — Vite + React 19 + Dexie + PWA (Étape 2)
+- `apps/web` — Vite + React 19 + Dexie + PWA + produits hybrides (Étape 3)
 - `apps/api` — API Fastify + MongoDB (auth JWT, catalogue, sync LWW)
 - `packages/shared` — types, `normalizeProductName`, schemas Zod
 
@@ -105,7 +105,7 @@ Ouvre [http://localhost:5173](http://localhost:5173). Les appels `/api/*` sont p
 
 Les documents sync utilisent des **UUID v4 string** comme `_id` (pas d’ObjectId Mongo).
 
-## Front (Étape 2)
+## Front (Étapes 2–3)
 
 - Routing mobile + layout (bottom nav)
 - Auth UI login/register branchée API
@@ -113,7 +113,16 @@ Les documents sync utilisent des **UUID v4 string** comme `_id` (pas d’ObjectI
 - CRUD local optimiste + outbox → sync push/pull
 - `vite-plugin-pwa` (precache shell, navigation fallback, API network-only)
 - Indicateur online / offline / sync
+- **Produits** : autocomplete sur `catalogProducts ∪ products` via `normalizeProductName` (anti-doublons accents/casse)
+
+### Tester l’anti-doublons produits
+
+1. Se connecter (catalogue syncé localement).
+2. Aller sur **Produits**, taper par ex. `LAIT DEMI-ECREME` ou `lait demi-écrémé` → suggestion catalogue + match exact.
+3. Valider → adoption / réutilisation, **pas** de second produit.
+4. Créer `Sauce Maison`, puis retaper `sauce  maison` / `SAUCE MAISON` → réutilise l’existant.
+5. Hors ligne (DevTools Offline) : créer un produit inconnu → UUID local + outbox.
 
 ## Roadmap
 
-Prochaine livrable : **Étape 3** — produits & anti-doublons (autocomplete normalisée).
+Prochaine livrable : **Étape 4** — recettes & meal plans.
