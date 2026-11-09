@@ -899,42 +899,60 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
-  padding: 0.85rem 0.95rem;
+  min-height: 3.25rem;
+  padding: 0.55rem 0.75rem 0.55rem 0.55rem;
   border-radius: 1.2rem;
   background: var(--surface);
   border: 3px solid rgba(30, 27, 75, 0.07);
   transition:
     opacity 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
     transform 0.2s var(--ease-bounce);
 }
 
 .shop-item.checked {
-  opacity: 0.55;
-  background: #f8fafc;
+  opacity: 0.72;
+  background: #f1f5f9;
+  border-color: rgba(249, 115, 22, 0.28);
 }
 
 .shop-item.checked strong {
   text-decoration: line-through;
+  color: #64748b;
 }
 
 .shop-check {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.45rem;
   flex: 1;
   min-width: 0;
+  min-height: 44px;
+  padding: 0.35rem 0.35rem 0.35rem 0.4rem;
+  margin: 0;
+  border-radius: 0.95rem;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.shop-check:active {
+  background: rgba(59, 130, 246, 0.08);
 }
 
 .shop-check-input {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   opacity: 0;
-  width: 1px;
-  height: 1px;
-  pointer-events: none;
+  cursor: pointer;
+  z-index: 1;
 }
 
-/* Zone tactile 44×44 ; cercle visible via ::before (sans alourdir la ligne). */
+/* Zone visuelle 44×44 (#20) ; hits via input plein label (comportement). */
 .shop-check-box {
   width: 44px;
   height: 44px;
@@ -946,6 +964,7 @@ textarea {
   position: relative;
   display: grid;
   place-items: center;
+  pointer-events: none;
   transition: transform 0.2s var(--ease-bounce);
 }
 
@@ -958,7 +977,12 @@ textarea {
   background: #fff;
   transition:
     background 0.18s ease,
-    border-color 0.18s ease;
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.shop-check-input:focus-visible + .shop-check-box::before {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
 }
 
 .shop-check-input:checked + .shop-check-box {
@@ -1001,6 +1025,9 @@ textarea {
   display: grid;
   gap: 0.1rem;
   min-width: 0;
+  pointer-events: none;
+  position: relative;
+  z-index: 0;
 }
 
 /* —— Cartoon hub / empty / motion —— */

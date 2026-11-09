@@ -440,6 +440,11 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                         type="checkbox"
                         checked={item.checked}
                         disabled={busy}
+                        aria-label={
+                          item.checked
+                            ? `Décocher ${item.nameSnapshot}`
+                            : `Cocher ${item.nameSnapshot}`
+                        }
                         onChange={() => void onToggle(item.id)}
                       />
                       <span className="shop-check-box" aria-hidden />
