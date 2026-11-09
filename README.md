@@ -10,11 +10,24 @@ Monorepo npm workspaces :
 
 ## Prérequis
 
-- **Node.js** ≥ 20
-- **MongoDB** ≥ 6 (local ou URI distante)
-- npm 10+
+- **Node.js** ≥ 20 *(sauf si vous lancez uniquement via Docker)*
+- **MongoDB** ≥ 6 (local, URI distante, ou service Compose)
+- npm 10+ *(idem)*
+- **Docker** + Docker Compose v2 *(option « Lancer avec Docker »)*
 
-## Setup local
+## Lancer avec Docker
+
+Mongo + API + front (build Vite servi par nginx, `/api` proxifié) :
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+# → http://localhost:8080
+```
+
+Le catalogue est seedé au démarrage de l’API. Arrêt : `docker compose down`. Variables : `.env` / `.env.example` (`DOCKER_CORS_ORIGIN`, `WEB_PORT`, secrets JWT…). Détails HTTPS : [docs/deploy-https.md](docs/deploy-https.md).
+
+## Setup local (npm)
 
 ```bash
 git clone https://github.com/Achassqt/orgmymiam.git
@@ -37,8 +50,10 @@ Voir `.env.example` et `apps/api/.env.example` :
 | `JWT_ACCESS_EXPIRES_IN` | Durée access token | `15m` |
 | `JWT_REFRESH_EXPIRES_IN` | Durée refresh token | `30d` |
 | `API_HOST` / `API_PORT` | Bind API | `0.0.0.0` / `3001` |
-| `CORS_ORIGIN` | Origine CORS front | `http://localhost:5173` |
+| `CORS_ORIGIN` | Origine CORS front (dev Vite) | `http://localhost:5173` |
+| `DOCKER_CORS_ORIGIN` | CORS pour Compose (nginx) | `http://localhost:8080` |
 | `CATALOG_VERSION` | Version du catalogue seed | `1` |
+| `WEB_PORT` | Port publié du front Docker | `8080` |
 
 Ne committez jamais de fichiers `.env` ni de secrets.
 
@@ -145,8 +160,10 @@ Ouvre [http://localhost:5173](http://localhost:5173). Les appels `/api/*` sont p
 5. Repasser **Online** : « Sauvegarde… » puis « Enregistré » ; cochages et quantités conservés.
 6. Recharger la page : état inchangé.
 
-Hors MVP : partage multi-user / temps réel (Étape 7 du plan).
+## Déployer en HTTPS
+
+Voir [docs/deploy-https.md](docs/deploy-https.md) : options concrètes **Fly.io**, **Render**, **VPS** (Docker + Caddy/Traefik), sans provisionner de cloud depuis ce dépôt.
 
 ## Roadmap
 
-MVP offline couvert jusqu’à l’Étape 6 + passe UX copy/unités. Suite possible : **Étape 7** — préparation partage 2 users.
+MVP offline + foyer + UI. Suite possible : durcir le déploiement (secrets, backups Mongo, domaine custom).
