@@ -23,20 +23,15 @@ export async function setCachedHousehold(value: HouseholdResponse | null): Promi
   }
 }
 
-/** Rafraîchit le cache foyer depuis l’API (404 → null). */
+/** Rafraîchit le cache foyer depuis l’API (200 + household null → null). */
 export async function refreshHouseholdCache(): Promise<CachedHousehold> {
-  try {
-    const data = await fetchMyHousehold();
-    await setCachedHousehold(data);
-    return data;
-  } catch (err) {
-    const status = typeof err === 'object' && err && 'status' in err ? Number(err.status) : 0;
-    if (status === 404) {
-      await setCachedHousehold(null);
-      return null;
-    }
-    throw err;
+  const data = await fetchMyHousehold();
+  if (!data.household) {
+    await setCachedHousehold(null);
+    return null;
   }
+  await setCachedHousehold(data);
+  return data;
 }
 
 export async function createHousehold(name: string): Promise<HouseholdResponse> {

@@ -41,7 +41,7 @@ export function LoginPage() {
             <IlloBowl className="food-illo" />
           </div>
           <p className="brand">OrgMyMiam</p>
-          <p className="auth-tagline">Let’s eat — organisez vos repas !</p>
+          <p className="auth-tagline">À table — organisez vos repas !</p>
         </div>
         <h1>Connexion</h1>
         <p className="lede">Retrouve tes plans et listes sur tous tes appareils.</p>

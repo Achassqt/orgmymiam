@@ -9,6 +9,7 @@ import { PullToRefresh } from '../components/PullToRefresh';
 import { HouseholdBadge } from '../components/VisibilityToggle';
 import { softDeleteMealPlan } from '../data/crud';
 import { db } from '../db/database';
+import { formatPlanDate } from '../lib/planDates';
 
 export function MealPlansPage() {
   const { session } = useAuth();
@@ -110,7 +111,7 @@ export function MealPlansPage() {
                     {plan.title} <HouseholdBadge visibility={plan.visibility} />
                   </strong>
                   <span className="meta">
-                    dès {plan.startDate} · {plan.slots.length}{' '}
+                    dès {formatPlanDate(plan.startDate)} · {plan.slots.length}{' '}
                     {plan.slots.length === 1 ? 'créneau' : 'créneaux'}
                   </span>
                 </button>

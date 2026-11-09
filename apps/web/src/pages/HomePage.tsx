@@ -8,18 +8,7 @@ import { HouseholdBadge } from '../components/VisibilityToggle';
 import { MEAL_TYPE_LABELS } from '../data/productSearch';
 import { db } from '../db/database';
 import { useHousehold } from '../hooks/useHousehold';
-
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function formatMealDate(iso: string, today: string): string {
-  if (iso === today) return 'Aujourd’hui';
-  const tomorrow = new Date(`${today}T12:00:00`);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  if (iso === tomorrow.toISOString().slice(0, 10)) return 'Demain';
-  return iso;
-}
+import { formatPlanDate, todayIsoDate } from '../lib/planDates';
 
 export function HomePage() {
   const { session } = useAuth();
@@ -103,7 +92,7 @@ export function HomePage() {
           ) : nextMeal ? (
             <Link className="hub-card" to={`/plans?edit=${nextMeal.planId}`}>
               <span className="hub-card-kicker">
-                {formatMealDate(nextMeal.date, today)} ·{' '}
+                {formatPlanDate(nextMeal.date, today)} ·{' '}
                 {MEAL_TYPE_LABELS[nextMeal.mealType] ?? nextMeal.mealType}
               </span>
               <strong className="hub-card-title">

@@ -11,7 +11,7 @@ export default defineConfig({
       manifest: {
         name: 'OrgMyMiam',
         short_name: 'OrgMyMiam',
-        description: 'Planification de repas et liste de courses offline-first',
+        description: 'Planification de repas et liste de courses, même hors ligne',
         theme_color: '#3B82F6',
         background_color: '#FFF8EF',
         display: 'standalone',

@@ -55,6 +55,15 @@ export interface HouseholdResponse {
   joinPath: string;
 }
 
+/** Réponse GET /households/me — jamais 404 : foyer absent → household null. */
+export type MyHouseholdResponse =
+  | HouseholdResponse
+  | {
+      household: null;
+      members?: undefined;
+      joinPath?: undefined;
+    };
+
 export interface User {
   _id: string;
   email: string;
