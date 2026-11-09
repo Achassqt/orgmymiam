@@ -6,7 +6,7 @@ import {
   removeShoppingItem,
   softDeleteShoppingList,
   toggleShoppingItem,
-  updateShoppingItemQuantity,
+  updateShoppingItemFields,
   updateShoppingList,
 } from '../data/crud';
 import type { ProductHit } from '../data/productSearch';
@@ -25,6 +25,10 @@ interface ShoppingListDetailProps {
   onBack: () => void;
 }
 
+type PendingDraft =
+  | { kind: 'hit'; hit: ProductHit; quantity: string; unit: string }
+  | { kind: 'create'; name: string; quantity: string; unit: string };
+
 export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) {
   const list = useLiveQuery(() => db.shoppingLists.get(listId), [listId]);
   const planInfo = useLiveQuery(async () => {
@@ -37,6 +41,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     const unique = [...new Set(servings)];
     return {
       title: plan.title,
+      mealCount: plan.slots.length,
       portionsHint:
         unique.length === 1
           ? `Quantités pour ${unique[0]} personne${unique[0] === 1 ? '' : 's'} (selon le planning)`
@@ -44,13 +49,13 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     };
   }, [list?.mealPlanId]);
 
-  const [quantity, setQuantity] = useState('1');
-  const [unit, setUnit] = useState('unité');
+  const [pending, setPending] = useState<PendingDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [showChecked, setShowChecked] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editQty, setEditQty] = useState('');
+  const [editUnit, setEditUnit] = useState('unité');
 
   const groups = useMemo(() => {
     if (!list) return [];
@@ -87,27 +92,29 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     }
   }
 
-  async function addExtraFromHit(hit: ProductHit) {
-    const qty = Number(quantity);
-    if (!Number.isFinite(qty) || qty <= 0) {
-      setFeedback('Quantité invalide');
-      return;
-    }
-    setBusy(true);
+  function pickHit(hit: ProductHit) {
     setFeedback(null);
-    try {
-      const nextUnit = hit.defaultUnit || unit;
-      const item = await buildExtraItemFromHit(hit, qty, nextUnit);
-      await addExtraItemToList(listId, item);
-      setFeedback(`Ajouté : ${hit.name}`);
-      setUnit(nextUnit);
-    } finally {
-      setBusy(false);
-    }
+    setPending({
+      kind: 'hit',
+      hit,
+      quantity: '1',
+      unit: hit.defaultUnit || 'unité',
+    });
   }
 
-  async function addExtraFromCreate(name: string) {
-    const qty = Number(quantity);
+  function pickCreate(name: string) {
+    setFeedback(null);
+    setPending({
+      kind: 'create',
+      name,
+      quantity: '1',
+      unit: 'unité',
+    });
+  }
+
+  async function confirmPending() {
+    if (!pending) return;
+    const qty = Number(pending.quantity);
     if (!Number.isFinite(qty) || qty <= 0) {
       setFeedback('Quantité invalide');
       return;
@@ -115,19 +122,52 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     setBusy(true);
     setFeedback(null);
     try {
-      const created = await createProduct({ name });
-      const hit: ProductHit = {
-        id: `user:${created.product._id}`,
-        name: created.product.name,
-        nameNormalized: created.product.nameNormalized,
-        category: created.product.category,
-        defaultUnit: created.product.defaultUnit,
-        source: 'user',
-        userProductId: created.product._id,
-      };
-      const item = await buildExtraItemFromHit(hit, qty, unit || created.product.defaultUnit);
+      let hit: ProductHit;
+      if (pending.kind === 'hit') {
+        hit = pending.hit;
+      } else {
+        const created = await createProduct({ name: pending.name, defaultUnit: pending.unit });
+        hit = {
+          id: `user:${created.product._id}`,
+          name: created.product.name,
+          nameNormalized: created.product.nameNormalized,
+          category: created.product.category,
+          defaultUnit: created.product.defaultUnit,
+          source: 'user',
+          userProductId: created.product._id,
+        };
+      }
+
+      const item = await buildExtraItemFromHit(hit, qty, pending.unit);
+      const current = await db.shoppingLists.get(listId);
+      const otherUnit = current?.items.find(
+        (row) =>
+          row.origin === 'extra' &&
+          row.productId === item.productId &&
+          row.productSource === item.productSource &&
+          row.unit !== item.unit,
+      );
+      if (otherUnit) {
+        setFeedback(
+          `« ${hit.name} » est déjà sur la liste (${formatQuantity(otherUnit.quantity, otherUnit.unit)}). Harmonise l’unité ou modifie la ligne.`,
+        );
+        return;
+      }
+
+      const before = current?.items.find(
+        (row) =>
+          row.origin === 'extra' &&
+          row.productId === item.productId &&
+          row.productSource === item.productSource &&
+          row.unit === item.unit,
+      );
       await addExtraItemToList(listId, item);
-      setFeedback(`Ajouté : ${created.product.name}`);
+      setFeedback(
+        before ? `Quantité de « ${hit.name} » augmentée.` : `Ajouté : ${hit.name}`,
+      );
+      setPending(null);
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : 'Ajout impossible');
     } finally {
       setBusy(false);
     }
@@ -154,12 +194,13 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     });
   }
 
-  function startEditQty(itemId: string, current: number) {
+  function startEdit(itemId: string, quantity: number, unit: string) {
     setEditingId(itemId);
-    setEditQty(String(current));
+    setEditQty(String(quantity));
+    setEditUnit(unit);
   }
 
-  async function saveEditQty(itemId: string) {
+  async function saveEdit(itemId: string) {
     const qty = Number(editQty);
     if (!Number.isFinite(qty) || qty <= 0) {
       setFeedback('Quantité invalide');
@@ -168,7 +209,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     setBusy(true);
     setFeedback(null);
     try {
-      await updateShoppingItemQuantity(listId, itemId, qty);
+      await updateShoppingItemFields(listId, itemId, { quantity: qty, unit: editUnit });
       setEditingId(null);
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : 'Modification impossible');
@@ -176,6 +217,12 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
       setBusy(false);
     }
   }
+
+  const pendingName = pending
+    ? pending.kind === 'hit'
+      ? pending.hit.name
+      : pending.name
+    : '';
 
   return (
     <div className="editor-panel">
@@ -199,7 +246,12 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
         {' · '}
         {progress.done}/{progress.total} cochés
       </p>
-      {planInfo ? <p className="field-help">{planInfo.portionsHint}</p> : null}
+      {planInfo ? (
+        <p className="portions-banner" role="status">
+          {planInfo.portionsHint}
+          {planInfo.mealCount > 0 ? ` · ${planInfo.mealCount} repas` : ''}
+        </p>
+      ) : null}
 
       <div className="editor-actions wrap">
         <button type="button" className="ghost-btn" onClick={() => setShowChecked((v) => !v)}>
@@ -249,11 +301,12 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                           aria-label={`Quantité pour ${item.nameSnapshot}`}
                           disabled={busy}
                         />
+                        <UnitSelect value={editUnit} onChange={setEditUnit} disabled={busy} />
                         <button
                           type="button"
                           className="ghost-btn"
                           disabled={busy}
-                          onClick={() => void saveEditQty(item.id)}
+                          onClick={() => void saveEdit(item.id)}
                         >
                           OK
                         </button>
@@ -270,7 +323,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                         type="button"
                         className="ghost-btn"
                         disabled={busy}
-                        onClick={() => startEditQty(item.id, item.quantity)}
+                        onClick={() => startEdit(item.id, item.quantity, item.unit)}
                       >
                         Qté
                       </button>
@@ -292,26 +345,66 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
 
       <div className="ingredient-adder">
         <h3 className="subhead">Ajouter un produit</h3>
-        <div className="qty-row">
-          <label>
-            Quantité
-            <input value={quantity} onChange={(e) => setQuantity(e.target.value)} inputMode="decimal" />
-          </label>
-          <label>
-            Unité
-            <UnitSelect value={unit} onChange={setUnit} />
-          </label>
-        </div>
-        <p className="field-help">L’unité se préremplit selon le produit choisi.</p>
-        <ProductSearchBox
-          busy={busy}
-          compact
-          placeholder="Ex. éponge, snacks…"
-          addLabel="Créer"
-          reuseLabel="Ajouter"
-          onCreate={(name) => void addExtraFromCreate(name)}
-          onSelect={(hit) => void addExtraFromHit(hit)}
-        />
+        {pending ? (
+          <div className="draft-panel stack-form">
+            <p className="draft-product">
+              <strong>{pendingName}</strong>
+              {pending.kind === 'hit' ? (
+                <span className="meta">Unité suggérée : {pending.hit.defaultUnit}</span>
+              ) : (
+                <span className="meta">Nouveau produit</span>
+              )}
+            </p>
+            <div className="qty-row">
+              <label>
+                Quantité
+                <input
+                  value={pending.quantity}
+                  onChange={(e) => setPending({ ...pending, quantity: e.target.value })}
+                  inputMode="decimal"
+                />
+              </label>
+              <label>
+                Unité
+                <UnitSelect
+                  value={pending.unit}
+                  onChange={(unit) => setPending({ ...pending, unit })}
+                />
+              </label>
+            </div>
+            <div className="editor-actions wrap">
+              <button
+                type="button"
+                className="primary-btn"
+                disabled={busy}
+                onClick={() => void confirmPending()}
+              >
+                Ajouter
+              </button>
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={busy}
+                onClick={() => setPending(null)}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="field-help">Choisis un produit, puis confirme quantité et unité.</p>
+            <ProductSearchBox
+              busy={busy}
+              compact
+              placeholder="Ex. éponge, snacks…"
+              addLabel="Choisir"
+              reuseLabel="Choisir"
+              onCreate={(name) => pickCreate(name)}
+              onSelect={(hit) => pickHit(hit)}
+            />
+          </>
+        )}
       </div>
 
       {feedback ? <p className="search-notice">{feedback}</p> : null}

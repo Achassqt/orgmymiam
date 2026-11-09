@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ProductSearchBox } from '../components/ProductSearchBox';
+import { UnitSelect } from '../components/UnitSelect';
 import { adoptCatalogProduct, createProduct, softDeleteProduct } from '../data/crud';
 import { categoryLabel, type ProductHit } from '../data/productSearch';
 import { db } from '../db/database';
@@ -19,6 +20,7 @@ export function ProductsPage() {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
+  const [defaultUnit, setDefaultUnit] = useState('unité');
 
   const filteredMine = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -32,13 +34,13 @@ export function ProductsPage() {
     setBusy(true);
     setFeedback(null);
     try {
-      const result = await createProduct({ name });
+      const result = await createProduct({ name, defaultUnit });
       if (result.status === 'reused_user') {
         setFeedback(`Déjà dans ta liste : « ${result.product.name} ».`);
       } else if (result.status === 'reused_catalog') {
         setFeedback(`Ajouté à tes produits : « ${result.product.name} ».`);
       } else {
-        setFeedback(`Produit créé : « ${result.product.name} ».`);
+        setFeedback(`Produit créé : « ${result.product.name} » (${unitDisplayLabel(result.product.defaultUnit)}).`);
       }
     } finally {
       setBusy(false);
@@ -70,6 +72,13 @@ export function ProductsPage() {
     <section className="page-section">
       <h1>Produits</h1>
       <p className="lede">Cherche un aliment, réutilise un existant ou crée-en un nouveau.</p>
+
+      <div className="product-create-unit">
+        <label>
+          Unité par défaut (nouveaux produits)
+          <UnitSelect value={defaultUnit} onChange={setDefaultUnit} />
+        </label>
+      </div>
 
       <ProductSearchBox busy={busy} onCreate={handleCreate} onSelect={handleSelect} />
 

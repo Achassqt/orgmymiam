@@ -36,19 +36,25 @@ export function ShoppingListPage() {
     [plans, mealPlanId],
   );
 
-  const portionsHint = useMemo(() => {
+  const portionsPreview = useMemo(() => {
     if (!selectedPlan) return null;
+    const mealCount = selectedPlan.slots.length;
     const overrides = selectedPlan.slots
       .map((s) => s.servingsOverride)
       .filter((n): n is number => n != null && n > 0);
-    if (overrides.length === 0) {
-      return 'Les quantités suivront les portions de chaque recette.';
-    }
     const unique = [...new Set(overrides)];
+    let servingsText: string;
     if (unique.length === 1) {
-      return `Quantités calculées pour ${unique[0]} personne${unique[0] === 1 ? '' : 's'}.`;
+      servingsText = `pour ${unique[0]} personne${unique[0] === 1 ? '' : 's'}`;
+    } else if (unique.length > 1) {
+      servingsText = 'selon les portions de chaque repas';
+    } else {
+      servingsText = 'selon les portions de chaque recette';
     }
-    return 'Quantités adaptées aux portions indiquées sur chaque repas.';
+    return {
+      mealCount,
+      summary: `${mealCount} repas · quantités ${servingsText}. Ex. : si une recette indique 400 g pour 2 pers. et le créneau est pour 4, la liste aura 800 g.`,
+    };
   }, [selectedPlan]);
 
   if (selectedId) {
@@ -113,7 +119,11 @@ export function ShoppingListPage() {
             ))}
           </select>
         </label>
-        {portionsHint ? <p className="field-help">{portionsHint}</p> : null}
+        {portionsPreview ? (
+          <p className="portions-banner" role="status">
+            {portionsPreview.summary}
+          </p>
+        ) : null}
         <label>
           Titre (optionnel)
           <input

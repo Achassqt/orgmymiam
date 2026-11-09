@@ -29,6 +29,7 @@ export function HomePage() {
       .flatMap((plan) =>
         plan.slots.map((slot) => ({
           ...slot,
+          planId: plan._id,
           planTitle: plan.title,
           recipeTitle: titleById[slot.recipeId] ?? 'Recette',
         })),
@@ -66,7 +67,7 @@ export function HomePage() {
           <ul className="entity-list">
             {nextMeals.map((slot) => (
               <li key={slot.id}>
-                <div>
+                <Link className="entity-main-btn" to={`/plans?edit=${slot.planId}`}>
                   <strong>{slot.recipeTitle}</strong>
                   <span className="meta">
                     {slot.date} · {MEAL_TYPE_LABELS[slot.mealType] ?? slot.mealType}
@@ -74,7 +75,7 @@ export function HomePage() {
                     {' · '}
                     {slot.planTitle}
                   </span>
-                </div>
+                </Link>
               </li>
             ))}
           </ul>

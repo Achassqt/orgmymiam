@@ -538,6 +538,73 @@ input {
   gap: 0.75rem;
 }
 
+.qty-row.compact {
+  gap: 0.5rem;
+}
+
+.qty-row.compact input,
+.qty-row.compact select {
+  padding: 0.45rem 0.55rem;
+}
+
+.portions-banner {
+  margin: 0.15rem 0 0.35rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.75rem;
+  background: rgba(46, 125, 90, 0.1);
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.ingredient-rows .ingredient-row {
+  display: grid;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.ingredient-name {
+  font-size: 1rem;
+}
+
+.draft-panel {
+  margin-top: 0.25rem;
+}
+
+.draft-product {
+  margin: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.adder-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.entity-list li.is-editing {
+  outline: 2px solid rgba(46, 125, 90, 0.35);
+}
+
+.product-create-unit {
+  margin-bottom: 0.85rem;
+  max-width: 16rem;
+}
+
+a.entity-main-btn {
+  color: inherit;
+}
+
 .field-help {
   margin: 0.35rem 0 0.55rem;
   color: var(--muted);
