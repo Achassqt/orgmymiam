@@ -1,5 +1,6 @@
 node_modules
 dist
+dev-dist
 coverage
 .env
 .env.local
@@ -8,3 +9,4 @@ coverage
 .vite
 *.tsbuildinfo
 .turbo
+apps/web/dev-dist

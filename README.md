@@ -4,7 +4,7 @@ PWA Offline-First de planification de repas et liste de courses.
 
 Monorepo npm workspaces :
 
-- `apps/web` — frontend Vite + React (stub pour l’instant ; PWA Dexie à l’Étape 2)
+- `apps/web` — Vite + React 19 + Dexie + PWA (Étape 2)
 - `apps/api` — API Fastify + MongoDB (auth JWT, catalogue, sync LWW)
 - `packages/shared` — types, `normalizeProductName`, schemas Zod
 
@@ -22,6 +22,7 @@ cd orgmymiam
 npm install
 cp .env.example apps/api/.env
 # Éditer apps/api/.env si besoin (URI Mongo, secrets JWT)
+npm run build:shared
 ```
 
 ### Variables d’environnement
@@ -63,13 +64,22 @@ npm run dev:api
 
 Health check : [http://127.0.0.1:3001/health](http://127.0.0.1:3001/health)
 
-## Lancer le web (stub)
+## Lancer le web (PWA)
 
 ```bash
 npm run dev:web
 ```
 
 Ouvre [http://localhost:5173](http://localhost:5173). Les appels `/api/*` sont proxifiés vers l’API.
+
+### Tester le mode offline
+
+1. Créer un compte / se connecter (nécessite l’API online une première fois).
+2. Vérifier que le catalogue se charge (accueil).
+3. Ajouter un produit ou une recette → visible immédiatement (Dexie) ; l’indicateur de sync doit remonter l’outbox puis repasser « À jour ».
+4. Dans DevTools → Network → **Offline**, ajouter encore des éléments : UI OK, outbox > 0, indicateur « Hors ligne ».
+5. Repasser online : flush `POST /sync/push` + pull automatique.
+6. Build installable : `npm run build -w @orgmymiam/web && npm run preview -w @orgmymiam/web` puis « Installer l’app » (manifest + service worker).
 
 ## Scripts utiles
 
@@ -95,6 +105,15 @@ Ouvre [http://localhost:5173](http://localhost:5173). Les appels `/api/*` sont p
 
 Les documents sync utilisent des **UUID v4 string** comme `_id` (pas d’ObjectId Mongo).
 
+## Front (Étape 2)
+
+- Routing mobile + layout (bottom nav)
+- Auth UI login/register branchée API
+- Dexie : `meta`, `catalogProducts`, `products`, `recipes`, `mealPlans`, `shoppingLists`, `outbox`
+- CRUD local optimiste + outbox → sync push/pull
+- `vite-plugin-pwa` (precache shell, navigation fallback, API network-only)
+- Indicateur online / offline / sync
+
 ## Roadmap
 
-Voir le plan d’architecture du projet. Prochaine livrable : **Étape 2** — PWA + Dexie + outbox.
+Prochaine livrable : **Étape 3** — produits & anti-doublons (autocomplete normalisée).
