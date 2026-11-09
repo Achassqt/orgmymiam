@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { ApiError } from '../api/client';
+import { DecorDots, IlloBowl } from '../components/FoodIllos';
 
 export function LoginPage() {
   const { session, login, loading } = useAuth();
@@ -34,7 +35,14 @@ export function LoginPage() {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <p className="brand">OrgMyMiam</p>
+        <div className="auth-hero panel-orange">
+          <DecorDots className="hero-decor" />
+          <div className="auth-hero-illo float-soft" aria-hidden>
+            <IlloBowl className="food-illo" />
+          </div>
+          <p className="brand">OrgMyMiam</p>
+          <p className="auth-tagline">Let’s eat — organisez vos repas !</p>
+        </div>
         <h1>Connexion</h1>
         <p className="lede">Retrouve tes plans et listes sur tous tes appareils.</p>
         <form onSubmit={(e) => void onSubmit(e)} className="stack-form">
@@ -60,7 +68,7 @@ export function LoginPage() {
             />
           </label>
           {error ? <p className="form-error">{error}</p> : null}
-          <button type="submit" className="primary-btn" disabled={submitting}>
+          <button type="submit" className="primary-btn bounce-press" disabled={submitting}>
             {submitting ? 'Connexion…' : 'Se connecter'}
           </button>
         </form>

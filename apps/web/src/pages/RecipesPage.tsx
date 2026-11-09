@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useAuth } from '../auth/AuthProvider';
+import { EmptyState } from '../components/EmptyState';
 import { PullToRefresh } from '../components/PullToRefresh';
 import { RecipeEditor } from '../components/RecipeEditor';
 import { HouseholdBadge } from '../components/VisibilityToggle';
@@ -25,11 +27,10 @@ export function RecipesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const selected = recipes.find((r) => r._id === selectedId) ?? null;
-  const editing = mode === 'create' || (mode === 'edit' && selected);
 
-  if (editing) {
+  if (mode === 'create' || (mode === 'edit' && selected)) {
     return (
-      <section className="page-section">
+      <section className="page-section page-enter">
         <RecipeEditor
           recipe={mode === 'edit' ? selected : null}
           onCancel={() => {
@@ -47,19 +48,38 @@ export function RecipesPage() {
 
   return (
     <PullToRefresh>
-      <section className="page-section">
+      <section className="page-section page-enter">
         <div className="page-heading">
           <div>
             <h1>Recettes</h1>
             <p className="lede">Tes plats avec portions et ingrédients.</p>
           </div>
-          <button type="button" className="primary-btn" onClick={() => setMode('create')}>
-            Nouvelle
-          </button>
+          {recipes.length > 0 ? (
+            <button
+              type="button"
+              className="primary-btn bounce-press"
+              onClick={() => setMode('create')}
+            >
+              Nouvelle
+            </button>
+          ) : null}
         </div>
 
         {recipes.length === 0 ? (
-          <p className="empty">Aucune recette — crée ta première.</p>
+          <EmptyState
+            illo="chef"
+            title="Ta première recette ?"
+            description="Ajoute un plat, ses portions et ses ingrédients — ensuite place-le au planning."
+            action={
+              <button
+                type="button"
+                className="primary-btn bounce-press"
+                onClick={() => setMode('create')}
+              >
+                Créer une recette
+              </button>
+            }
+          />
         ) : (
           <ul className="entity-list">
             {recipes.map((recipe) => (
@@ -92,6 +112,12 @@ export function RecipesPage() {
             ))}
           </ul>
         )}
+
+        {recipes.length > 0 ? (
+          <p className="page-foot-link">
+            <Link to="/produits">Gérer mes produits</Link>
+          </p>
+        ) : null}
       </section>
     </PullToRefresh>
   );
