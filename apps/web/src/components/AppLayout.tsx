@@ -1,5 +1,6 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
+import { useHousehold } from '../hooks/useHousehold';
 import { SyncIndicator } from './SyncIndicator';
 
 const NAV: Array<{ to: string; label: string; end?: boolean }> = [
@@ -12,13 +13,31 @@ const NAV: Array<{ to: string; label: string; end?: boolean }> = [
 
 export function AppLayout() {
   const { session, logout } = useAuth();
+  const { isMember, household } = useHousehold();
 
   return (
     <div className="app-shell">
       <header className="topbar">
         <div className="brand-block">
           <p className="brand">OrgMyMiam</p>
-          <p className="user-line">{session?.user.displayName}</p>
+          <p className="user-line">
+            {session?.user.displayName}
+            {isMember && household ? (
+              <>
+                {' · '}
+                <Link to="/foyer" className="foyer-link">
+                  {household.name}
+                </Link>
+              </>
+            ) : (
+              <>
+                {' · '}
+                <Link to="/foyer" className="foyer-link">
+                  Foyer
+                </Link>
+              </>
+            )}
+          </p>
         </div>
         <div className="topbar-actions">
           <SyncIndicator />

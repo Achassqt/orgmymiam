@@ -29,6 +29,31 @@ let running: Promise<void> | null = null;
 let onlineHandlerBound = false;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let enqueueTimer: ReturnType<typeof setTimeout> | null = null;
+/** Incrémenté à chaque purge locale pour abandonner un sync en cours. */
+let localDataEpoch = 0;
+
+export function bumpLocalDataEpoch(): number {
+  localDataEpoch += 1;
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+  if (enqueueTimer) {
+    clearTimeout(enqueueTimer);
+    enqueueTimer = null;
+  }
+  return localDataEpoch;
+}
+
+export function getLocalDataEpoch(): number {
+  return localDataEpoch;
+}
+
+export async function waitForSyncIdle(): Promise<void> {
+  if (running) {
+    await running.catch(() => undefined);
+  }
+}
 
 export const OUTBOX_MAX_ATTEMPTS = 8;
 const BASE_BACKOFF_MS = 2_000;
@@ -306,15 +331,20 @@ export async function runSync(reason = 'manual'): Promise<void> {
     return;
   }
 
+  const epochAtStart = localDataEpoch;
+
   running = (async () => {
     try {
+      if (epochAtStart !== localDataEpoch) return;
       await setStatus('syncing');
       const deviceId = await ensureDeviceId();
       await syncCatalog();
+      if (epochAtStart !== localDataEpoch) return;
       let conflicts = 0;
       let deadLetters = 0;
       // Jusqu’à 3 passes si un conflit LWW re-queue un update local plus récent
       for (let round = 0; round < 3; round += 1) {
+        if (epochAtStart !== localDataEpoch) return;
         const result = await flushOutbox(deviceId);
         conflicts += result.conflicts;
         deadLetters += result.deadLetters;
@@ -323,8 +353,10 @@ export async function runSync(reason = 'manual'): Promise<void> {
           .count();
         if (dueLeft === 0) break;
       }
+      if (epochAtStart !== localDataEpoch) return;
       const since = (await getMeta<string>(META_KEYS.lastSyncAt)) ?? '1970-01-01T00:00:00.000Z';
       const pulled = await pullChanges(deviceId, since);
+      if (epochAtStart !== localDataEpoch) return;
       await applyPull(pulled);
 
       const remaining = await db.outbox.filter((e) => !e.deadLetter).count();
@@ -344,9 +376,11 @@ export async function runSync(reason = 'manual'): Promise<void> {
         await setNotice(null);
       }
 
+      if (epochAtStart !== localDataEpoch) return;
       await setStatus('idle');
       console.debug('[sync] ok', reason);
     } catch (err) {
+      if (epochAtStart !== localDataEpoch) return;
       const message = err instanceof Error ? err.message : 'Erreur d’enregistrement';
       await setStatus('error', message);
       scheduleRetryWakeup();

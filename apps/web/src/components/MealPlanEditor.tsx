@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { MEAL_TYPES, type MealPlan, type MealSlot, type MealType } from '@orgmymiam/shared';
+import { useAuth } from '../auth/AuthProvider';
 import { buildMealSlot, createMealPlan, updateMealPlan } from '../data/crud';
 import { MEAL_TYPE_LABELS } from '../data/productSearch';
 import { db } from '../db/database';
+import { VisibilityToggle } from './VisibilityToggle';
 
 interface MealPlanEditorProps {
   plan?: MealPlan | null;
@@ -26,10 +28,12 @@ function personsLabel(n: number): string {
 }
 
 export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) {
+  const { session } = useAuth();
+  const userId = session?.user._id;
   const recipes =
     useLiveQuery(
-      () => db.recipes.filter((r) => r.deletedAt == null).sortBy('title'),
-      [],
+      () => (userId ? db.recipes.filter((r) => r.deletedAt == null).sortBy('title') : []),
+      [userId],
     ) ?? [];
 
   const [title, setTitle] = useState(plan?.title ?? '');
@@ -191,6 +195,13 @@ export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) 
             required
           />
         </label>
+        {plan ? (
+          <VisibilityToggle
+            entity="meal_plans"
+            id={plan._id}
+            value={plan.visibility ?? 'private'}
+          />
+        ) : null}
       </div>
 
       <h3 className="subhead">Créneaux</h3>

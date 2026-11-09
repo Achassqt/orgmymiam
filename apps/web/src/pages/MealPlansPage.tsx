@@ -1,20 +1,27 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../auth/AuthProvider';
 import { MealPlanEditor } from '../components/MealPlanEditor';
+import { PullToRefresh } from '../components/PullToRefresh';
+import { HouseholdBadge } from '../components/VisibilityToggle';
 import { softDeleteMealPlan } from '../data/crud';
 import { db } from '../db/database';
 
 export function MealPlansPage() {
+  const { session } = useAuth();
+  const userId = session?.user._id;
   const [searchParams, setSearchParams] = useSearchParams();
   const plans =
     useLiveQuery(
       () =>
-        db.mealPlans
-          .filter((p) => p.deletedAt == null)
-          .reverse()
-          .sortBy('updatedAt'),
-      [],
+        userId
+          ? db.mealPlans
+              .filter((p) => p.deletedAt == null)
+              .reverse()
+              .sortBy('updatedAt')
+          : [],
+      [userId],
     ) ?? [];
   const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -52,48 +59,52 @@ export function MealPlansPage() {
   }
 
   return (
-    <section className="page-section">
-      <div className="page-heading">
-        <div>
-          <h1>Planning</h1>
-          <p className="lede">Organise les repas de la semaine : date, type et recette.</p>
+    <PullToRefresh>
+      <section className="page-section">
+        <div className="page-heading">
+          <div>
+            <h1>Planning</h1>
+            <p className="lede">Organise les repas de la semaine : date, type et recette.</p>
+          </div>
+          <button type="button" className="primary-btn" onClick={() => setMode('create')}>
+            Nouveau
+          </button>
         </div>
-        <button type="button" className="primary-btn" onClick={() => setMode('create')}>
-          Nouveau
-        </button>
-      </div>
 
-      {plans.length === 0 ? (
-        <p className="empty">Aucun planning — crée ta semaine.</p>
-      ) : (
-        <ul className="entity-list">
-          {plans.map((plan) => (
-            <li key={plan._id}>
-              <button
-                type="button"
-                className="entity-main-btn"
-                onClick={() => {
-                  setSelectedId(plan._id);
-                  setMode('edit');
-                }}
-              >
-                <strong>{plan.title}</strong>
-                <span className="meta">
-                  dès {plan.startDate} · {plan.slots.length}{' '}
-                  {plan.slots.length === 1 ? 'créneau' : 'créneaux'}
-                </span>
-              </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={() => void softDeleteMealPlan(plan._id)}
-              >
-                Suppr.
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+        {plans.length === 0 ? (
+          <p className="empty">Aucun planning — crée ta semaine.</p>
+        ) : (
+          <ul className="entity-list">
+            {plans.map((plan) => (
+              <li key={plan._id}>
+                <button
+                  type="button"
+                  className="entity-main-btn"
+                  onClick={() => {
+                    setSelectedId(plan._id);
+                    setMode('edit');
+                  }}
+                >
+                  <strong>
+                    {plan.title} <HouseholdBadge visibility={plan.visibility} />
+                  </strong>
+                  <span className="meta">
+                    dès {plan.startDate} · {plan.slots.length}{' '}
+                    {plan.slots.length === 1 ? 'créneau' : 'créneaux'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  onClick={() => void softDeleteMealPlan(plan._id)}
+                >
+                  Suppr.
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </PullToRefresh>
   );
 }

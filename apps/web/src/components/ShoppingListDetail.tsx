@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useAuth } from '../auth/AuthProvider';
 import {
   addExtraItemToList,
   createProduct,
@@ -9,6 +10,7 @@ import {
   updateShoppingItemFields,
   updateShoppingList,
 } from '../data/crud';
+import { getCachedHousehold } from '../data/household';
 import type { ProductHit } from '../data/productSearch';
 import {
   buildExtraItemFromHit,
@@ -17,8 +19,10 @@ import {
 } from '../data/shoppingList';
 import { db } from '../db/database';
 import { formatQuantity } from '../lib/units';
+import { runSync } from '../sync/engine';
 import { ProductSearchBox } from './ProductSearchBox';
 import { UnitSelect } from './UnitSelect';
+import { HouseholdBadge, VisibilityToggle } from './VisibilityToggle';
 
 interface ShoppingListDetailProps {
   listId: string;
@@ -30,11 +34,27 @@ type PendingDraft =
   | { kind: 'create'; name: string; quantity: string; unit: string };
 
 export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) {
-  const list = useLiveQuery(() => db.shoppingLists.get(listId), [listId]);
+  const { session } = useAuth();
+  const userId = session?.user._id;
+  const list = useLiveQuery(async () => {
+    const row = await db.shoppingLists.get(listId);
+    if (!row || row.deletedAt) return undefined;
+    if (!userId) return row;
+    if (row.userId === userId) return row;
+    const household = await getCachedHousehold();
+    if (
+      row.visibility === 'household' &&
+      household?.household &&
+      row.householdId === household.household._id
+    ) {
+      return row;
+    }
+    return undefined;
+  }, [listId, userId]);
   const planInfo = useLiveQuery(async () => {
     if (!list?.mealPlanId) return null;
     const plan = await db.mealPlans.get(list.mealPlanId);
-    if (!plan) return null;
+    if (!plan || plan.deletedAt) return null;
     const servings = plan.slots
       .map((slot) => slot.servingsOverride)
       .filter((n): n is number => n != null && n > 0);
@@ -47,7 +67,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
           ? `Quantités pour ${unique[0]} personne${unique[0] === 1 ? '' : 's'} (selon le planning)`
           : 'Quantités selon les portions de chaque repas du planning',
     };
-  }, [list?.mealPlanId]);
+  }, [list?.mealPlanId, userId]);
 
   const [pending, setPending] = useState<PendingDraft | null>(null);
   const [busy, setBusy] = useState(false);
@@ -56,6 +76,16 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editQty, setEditQty] = useState('');
   const [editUnit, setEditUnit] = useState('unité');
+
+  // Polling sync 8s tant que le détail liste est ouvert
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        void runSync('shopping-poll');
+      }
+    }, 8_000);
+    return () => window.clearInterval(timer);
+  }, [listId]);
 
   const groups = useMemo(() => {
     if (!list) return [];
@@ -239,7 +269,19 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
         </button>
       </div>
 
-      <h1>{list.title}</h1>
+      <h1>
+        {list.title} <HouseholdBadge visibility={list.visibility} />
+      </h1>
+      {list.visibility === 'household' ? (
+        <p className="meta members-hint">
+          {list.memberIds.length} membre{list.memberIds.length === 1 ? '' : 's'} · sync auto
+        </p>
+      ) : null}
+      <VisibilityToggle
+        entity="shopping_lists"
+        id={list._id}
+        value={list.visibility ?? 'private'}
+      />
       <p className="lede">
         {list.status === 'open' ? 'Ouverte' : 'Terminée'}
         {planInfo ? ` · planning « ${planInfo.title} »` : ' · sans planning'}

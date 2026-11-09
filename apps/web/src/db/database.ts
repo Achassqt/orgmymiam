@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type {
   CatalogProduct,
+  HouseholdResponse,
   MealPlan,
   Product,
   PublicUser,
@@ -41,6 +42,7 @@ export type MetaValue =
   | boolean
   | null
   | AuthSession
+  | HouseholdResponse
   | Record<string, unknown>;
 
 export interface MetaRecord {
@@ -51,6 +53,10 @@ export interface MetaRecord {
 export const META_KEYS = {
   deviceId: 'deviceId',
   auth: 'auth',
+  /** Dernier userId connu — survit à un auth null (token expiré) pour éviter une purge mono-compte. */
+  lastUserId: 'lastUserId',
+  /** Cache foyer courant (HouseholdResponse | null). */
+  household: 'household',
   catalogVersion: 'catalogVersion',
   lastSyncAt: 'lastSyncAt',
   lastSyncError: 'lastSyncError',
@@ -81,6 +87,16 @@ export class OrgMyMiamDB extends Dexie {
       shoppingLists: '_id, userId, updatedAt, deletedAt, status',
       outbox: 'id, entity, entityId, createdAt',
     });
+
+    this.version(2).stores({
+      meta: 'key',
+      catalogProducts: '_id, nameNormalized, catalogVersion, category',
+      products: '_id, userId, householdId, nameNormalized, updatedAt, deletedAt',
+      recipes: '_id, userId, householdId, updatedAt, deletedAt',
+      mealPlans: '_id, userId, householdId, updatedAt, deletedAt, startDate',
+      shoppingLists: '_id, userId, householdId, updatedAt, deletedAt, status',
+      outbox: 'id, entity, entityId, createdAt',
+    });
   }
 }
 
@@ -101,4 +117,82 @@ export async function ensureDeviceId(): Promise<string> {
   const deviceId = crypto.randomUUID();
   await setMeta(META_KEYS.deviceId, deviceId);
   return deviceId;
+}
+
+export async function deleteMeta(key: string): Promise<void> {
+  await db.meta.delete(key);
+}
+
+/**
+ * Clés meta liées à la session / sync utilisateur.
+ * Conservés volontairement au switch de compte :
+ * - `deviceId` : identité appareil (cursors serveur sont (userId, deviceId))
+ * - `catalogVersion` + table `catalogProducts` : catalogue socle partagé
+ */
+export const USER_SCOPED_META_KEYS = [
+  META_KEYS.auth,
+  META_KEYS.lastUserId,
+  META_KEYS.household,
+  META_KEYS.lastSyncAt,
+  META_KEYS.lastSyncError,
+  META_KEYS.lastSyncStatus,
+  META_KEYS.lastSyncNotice,
+] as const;
+
+/** Purge données user locales + meta sync/auth. Garde catalogue + deviceId. */
+export async function clearUserScopedLocalData(): Promise<void> {
+  await db.transaction(
+    'rw',
+    [db.meta, db.products, db.recipes, db.mealPlans, db.shoppingLists, db.outbox],
+    async () => {
+      await Promise.all([
+        db.products.clear(),
+        db.recipes.clear(),
+        db.mealPlans.clear(),
+        db.shoppingLists.clear(),
+        db.outbox.clear(),
+        ...USER_SCOPED_META_KEYS.map((key) => db.meta.delete(key)),
+      ]);
+    },
+  );
+}
+
+/** True s’il reste des données user / outbox locales (ex. logout incomplet). */
+export async function hasLocalUserScopedData(): Promise<boolean> {
+  const [products, recipes, mealPlans, shoppingLists, outbox] = await Promise.all([
+    db.products.count(),
+    db.recipes.count(),
+    db.mealPlans.count(),
+    db.shoppingLists.count(),
+    db.outbox.count(),
+  ]);
+  return products + recipes + mealPlans + shoppingLists + outbox > 0;
+}
+
+/**
+ * True s’il reste des docs d’un autre compte hors partage foyer.
+ * Les docs `visibility: household` d’autres membres sont attendus après pull.
+ */
+export async function hasForeignUserScopedData(userId: string): Promise<boolean> {
+  const isForeignPrivate = (row: { userId: string; visibility?: string }) =>
+    row.userId !== userId && row.visibility !== 'household';
+  const [product, recipe, mealPlan, shoppingList] = await Promise.all([
+    db.products.filter(isForeignPrivate).first(),
+    db.recipes.filter(isForeignPrivate).first(),
+    db.mealPlans.filter(isForeignPrivate).first(),
+    db.shoppingLists.filter(isForeignPrivate).first(),
+  ]);
+  return Boolean(product || recipe || mealPlan || shoppingList);
+}
+
+/** Docs visibles localement : perso + partagés foyer déjà pullés. */
+export function isLocallyVisibleDoc(
+  row: { deletedAt: string | null },
+): boolean {
+  return row.deletedAt == null;
+}
+
+export async function getSessionUserId(): Promise<string | null> {
+  const session = await getMeta<AuthSession | null>(META_KEYS.auth);
+  return session?.user._id ?? null;
 }

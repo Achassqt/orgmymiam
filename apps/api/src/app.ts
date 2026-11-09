@@ -5,6 +5,7 @@ import { registerAuth } from './plugins/auth.js';
 import { authRoutes } from './routes/auth.js';
 import { catalogRoutes } from './routes/catalog.js';
 import { healthRoutes } from './routes/health.js';
+import { householdRoutes } from './routes/households.js';
 import { syncRoutes } from './routes/sync.js';
 
 export async function buildApp() {
@@ -24,6 +25,7 @@ export async function buildApp() {
   await app.register(healthRoutes);
   await app.register(authRoutes);
   await app.register(catalogRoutes);
+  await app.register(householdRoutes);
   await app.register(syncRoutes);
 
   return app;

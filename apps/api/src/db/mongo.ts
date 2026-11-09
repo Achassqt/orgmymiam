@@ -1,6 +1,7 @@
 import { MongoClient, type Db, type Collection } from 'mongodb';
 import type {
   CatalogProduct,
+  Household,
   MealPlan,
   Product,
   Recipe,
@@ -28,6 +29,7 @@ export interface Collections {
   shoppingLists: Collection<ShoppingList>;
   syncCursors: Collection<SyncCursor>;
   refreshTokens: Collection<RefreshTokenDoc>;
+  households: Collection<Household>;
 }
 
 let client: MongoClient | null = null;
@@ -51,6 +53,7 @@ export async function connectMongo(): Promise<{ db: Db; collections: Collections
     shoppingLists: db.collection<ShoppingList>('shopping_lists'),
     syncCursors: db.collection<SyncCursor>('sync_cursors'),
     refreshTokens: db.collection<RefreshTokenDoc>('refresh_tokens'),
+    households: db.collection<Household>('households'),
   };
 
   await ensureIndexes(collections);
@@ -80,11 +83,17 @@ async function ensureIndexes(cols: Collections): Promise<void> {
     cols.catalogProducts.createIndex({ nameNormalized: 1 }),
     cols.products.createIndex({ userId: 1, updatedAt: 1 }),
     cols.products.createIndex({ userId: 1, nameNormalized: 1 }),
+    cols.products.createIndex({ householdId: 1, visibility: 1, updatedAt: 1 }),
     cols.recipes.createIndex({ userId: 1, updatedAt: 1 }),
+    cols.recipes.createIndex({ householdId: 1, visibility: 1, updatedAt: 1 }),
     cols.mealPlans.createIndex({ userId: 1, updatedAt: 1 }),
+    cols.mealPlans.createIndex({ householdId: 1, visibility: 1, updatedAt: 1 }),
     cols.shoppingLists.createIndex({ userId: 1, updatedAt: 1 }),
+    cols.shoppingLists.createIndex({ householdId: 1, visibility: 1, updatedAt: 1 }),
     cols.syncCursors.createIndex({ userId: 1, deviceId: 1 }, { unique: true }),
     cols.refreshTokens.createIndex({ userId: 1 }),
     cols.refreshTokens.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    cols.households.createIndex({ inviteCode: 1 }, { unique: true }),
+    cols.households.createIndex({ memberIds: 1 }),
   ]);
 }

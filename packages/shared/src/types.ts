@@ -22,6 +22,39 @@ export interface UserOwned {
   userId: string;
 }
 
+/** Visibilité locale vs foyer (V1). */
+export type Visibility = 'private' | 'household';
+
+export interface HouseholdShare {
+  /** Foyer associé ; null si contenu perso hors foyer. */
+  householdId: string | null;
+  visibility: Visibility;
+}
+
+export interface Household {
+  _id: string;
+  name: string;
+  /** Code invitation 6 caractères, unique, upper-case. */
+  inviteCode: string;
+  ownerId: string;
+  memberIds: string[];
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+}
+
+export interface HouseholdMemberPublic {
+  _id: string;
+  displayName: string;
+  email: string;
+}
+
+export interface HouseholdResponse {
+  household: Household;
+  members: HouseholdMemberPublic[];
+  /** Lien profond prêt à copier (chemin relatif ou absolu selon le client). */
+  joinPath: string;
+}
+
 export interface User {
   _id: string;
   email: string;
@@ -48,7 +81,7 @@ export interface CatalogProduct {
   catalogVersion: number;
 }
 
-export interface Product extends UserOwned, SyncMeta {
+export interface Product extends UserOwned, SyncMeta, HouseholdShare {
   name: string;
   nameNormalized: string;
   category: ProductCategory;
@@ -63,7 +96,7 @@ export interface RecipeIngredient {
   unit: string;
 }
 
-export interface Recipe extends UserOwned, SyncMeta {
+export interface Recipe extends UserOwned, SyncMeta, HouseholdShare {
   title: string;
   servings: number;
   ingredients: RecipeIngredient[];
@@ -78,7 +111,7 @@ export interface MealSlot {
   servingsOverride: number | null;
 }
 
-export interface MealPlan extends UserOwned, SyncMeta {
+export interface MealPlan extends UserOwned, SyncMeta, HouseholdShare {
   title: string;
   startDate: IsoDate;
   slots: MealSlot[];
@@ -100,12 +133,12 @@ export interface ShoppingListItem {
   updatedBy?: string;
 }
 
-export interface ShoppingList extends UserOwned, SyncMeta {
+export interface ShoppingList extends UserOwned, SyncMeta, HouseholdShare {
   title: string;
   mealPlanId: string | null;
   status: ShoppingListStatus;
   items: ShoppingListItem[];
-  /** Réservé partage futur — MVP : [userId] */
+  /** Aligné sur les membres du foyer si visibility === 'household'. */
   memberIds: string[];
 }
 

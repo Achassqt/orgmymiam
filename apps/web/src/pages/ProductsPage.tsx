@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useAuth } from '../auth/AuthProvider';
 import { ProductSearchBox } from '../components/ProductSearchBox';
 import { UnitSelect } from '../components/UnitSelect';
 import { adoptCatalogProduct, createProduct, softDeleteProduct } from '../data/crud';
@@ -8,14 +9,18 @@ import { db } from '../db/database';
 import { unitDisplayLabel } from '../lib/units';
 
 export function ProductsPage() {
+  const { session } = useAuth();
+  const userId = session?.user._id;
   const products =
     useLiveQuery(
       () =>
-        db.products
-          .filter((p) => p.deletedAt == null)
-          .reverse()
-          .sortBy('updatedAt'),
-      [],
+        userId
+          ? db.products
+              .filter((p) => p.deletedAt == null)
+              .reverse()
+              .sortBy('updatedAt')
+          : [],
+      [userId],
     ) ?? [];
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);

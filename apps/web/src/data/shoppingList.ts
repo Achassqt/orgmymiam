@@ -5,13 +5,24 @@ import {
   type ShoppingList,
   type ShoppingListItem,
 } from '@orgmymiam/shared';
-import { db } from '../db/database';
+import { db, getSessionUserId } from '../db/database';
 import {
   createShoppingList,
   updateShoppingList,
 } from './crud';
+import { getCachedHousehold } from './household';
 import type { ProductHit } from './productSearch';
 import { categoryLabel } from './productSearch';
+
+function canSee(
+  row: { userId: string; visibility?: string; householdId?: string | null },
+  userId: string | null,
+  householdId: string | null,
+): boolean {
+  if (!userId) return true;
+  if (row.userId === userId) return true;
+  return row.visibility === 'household' && !!householdId && row.householdId === householdId;
+}
 
 export interface ProductMeta {
   name: string;
@@ -29,8 +40,11 @@ export async function lookupProductMeta(
       return { name: item.name, category: item.category, defaultUnit: item.defaultUnit };
     }
   } else {
+    const userId = await getSessionUserId();
+    const household = await getCachedHousehold();
+    const householdId = household?.household._id ?? null;
     const item = await db.products.get(productId);
-    if (item) {
+    if (item && canSee(item, userId, householdId)) {
       return { name: item.name, category: item.category, defaultUnit: item.defaultUnit };
     }
   }
@@ -47,8 +61,11 @@ function nowIso(): string {
 
 /** Construit les lignes consolidées (origin meal) depuis un meal plan. */
 export async function buildMealItemsFromPlan(mealPlanId: string): Promise<ShoppingListItem[]> {
+  const userId = await getSessionUserId();
+  const household = await getCachedHousehold();
+  const householdId = household?.household._id ?? null;
   const plan = await db.mealPlans.get(mealPlanId);
-  if (!plan || plan.deletedAt) {
+  if (!plan || plan.deletedAt || !canSee(plan, userId, householdId)) {
     throw new Error('Plan de repas introuvable');
   }
 
@@ -66,7 +83,7 @@ export async function buildMealItemsFromPlan(mealPlanId: string): Promise<Shoppi
 
   for (const slot of plan.slots) {
     const recipe = await db.recipes.get(slot.recipeId);
-    if (!recipe || recipe.deletedAt) continue;
+    if (!recipe || recipe.deletedAt || !canSee(recipe, userId, householdId)) continue;
 
     const baseServings = recipe.servings > 0 ? recipe.servings : 1;
     const targetServings = slot.servingsOverride ?? recipe.servings;
@@ -118,8 +135,9 @@ export async function generateShoppingListFromMealPlan(input: {
   mealPlanId: string;
   title?: string;
 }): Promise<ShoppingList> {
+  const userId = await getSessionUserId();
   const plan = await db.mealPlans.get(input.mealPlanId);
-  if (!plan || plan.deletedAt) {
+  if (!plan || plan.deletedAt || (userId && plan.userId !== userId)) {
     throw new Error('Plan de repas introuvable');
   }
 
@@ -136,8 +154,9 @@ export async function generateShoppingListFromMealPlan(input: {
 
 /** Régénère les lignes meal en conservant les extras (et le cochage extras). */
 export async function regenerateMealItems(listId: string): Promise<ShoppingList> {
+  const userId = await getSessionUserId();
   const list = await db.shoppingLists.get(listId);
-  if (!list || list.deletedAt) {
+  if (!list || list.deletedAt || (userId && list.userId !== userId)) {
     throw new Error('Liste introuvable');
   }
   if (!list.mealPlanId) {

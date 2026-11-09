@@ -5,7 +5,7 @@ import {
   type ProductCategory,
   type ProductSource,
 } from '@orgmymiam/shared';
-import { db } from '../db/database';
+import { db, getSessionUserId } from '../db/database';
 
 export interface ProductHit {
   id: string;
@@ -61,11 +61,14 @@ function toUserHit(item: Product): ProductHit {
   };
 }
 
-/** Fusionne catalogue + produits user (non deleted), dédupliqués par nameNormalized (user prioritaire). */
+/** Fusionne catalogue + produits user locaux (perso + foyer), dédupliqués par nameNormalized. */
 export async function loadProductUniverse(): Promise<ProductHit[]> {
+  const userId = await getSessionUserId();
   const [catalog, products] = await Promise.all([
     db.catalogProducts.toArray(),
-    db.products.filter((p) => p.deletedAt == null).toArray(),
+    userId
+      ? db.products.filter((p) => p.deletedAt == null).toArray()
+      : Promise.resolve([] as Product[]),
   ]);
 
   const byNormalized = new Map<string, ProductHit>();
@@ -121,9 +124,14 @@ export async function findExactProductMatch(rawName: string): Promise<ProductHit
   const normalized = normalizeProductName(rawName);
   if (!normalized) return null;
 
-  const user = await db.products
-    .filter((p) => p.deletedAt == null && p.nameNormalized === normalized)
-    .first();
+  const userId = await getSessionUserId();
+  const user = userId
+    ? await db.products
+        .where('userId')
+        .equals(userId)
+        .filter((p) => p.deletedAt == null && p.nameNormalized === normalized)
+        .first()
+    : undefined;
   if (user) return toUserHit(user);
 
   const catalog = await db.catalogProducts.where('nameNormalized').equals(normalized).first();
@@ -157,8 +165,10 @@ export async function lookupProductLabel(
     const item = await db.catalogProducts.get(productId);
     return item?.name ?? 'Produit catalogue';
   }
+  const userId = await getSessionUserId();
   const item = await db.products.get(productId);
-  return item?.name ?? 'Produit perso';
+  if (!item || (userId && item.userId !== userId)) return 'Produit perso';
+  return item.name;
 }
 
 export const MEAL_TYPE_LABELS: Record<string, string> = {
