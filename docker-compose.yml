@@ -1,0 +1,60 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    # Port exposé pour debug local uniquement ; en prod VPS on peut le retirer
+    ports:
+      - '${MONGO_PORT:-27017}:27017'
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      # URI interne Docker (écrase .env local 127.0.0.1)
+      MONGODB_URI: mongodb://mongo:27017/orgmymiam
+      API_HOST: 0.0.0.0
+      API_PORT: 3001
+      # Ne pas réutiliser CORS_ORIGIN du .env Vite (5173) : same-origin via nginx :8080
+      CORS_ORIGIN: ${DOCKER_CORS_ORIGIN:-http://localhost:8080}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-8080}:80'
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
