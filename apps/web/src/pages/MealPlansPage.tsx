@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useSearchParams } from 'react-router-dom';
 import { MealPlanEditor } from '../components/MealPlanEditor';
 import { softDeleteMealPlan } from '../data/crud';
 import { db } from '../db/database';
 
 export function MealPlansPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const plans =
     useLiveQuery(
       () =>
@@ -18,19 +20,32 @@ export function MealPlansPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = plans.find((p) => p._id === selectedId) ?? null;
 
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (!editId) return;
+    if (plans.some((p) => p._id === editId)) {
+      setSelectedId(editId);
+      setMode('edit');
+    }
+  }, [searchParams, plans]);
+
+  function closeEditor() {
+    setMode('list');
+    setSelectedId(null);
+    if (searchParams.has('edit')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('edit');
+      setSearchParams(next, { replace: true });
+    }
+  }
+
   if (mode === 'create' || (mode === 'edit' && selected)) {
     return (
       <section className="page-section">
         <MealPlanEditor
           plan={mode === 'edit' ? selected : null}
-          onCancel={() => {
-            setMode('list');
-            setSelectedId(null);
-          }}
-          onDone={() => {
-            setMode('list');
-            setSelectedId(null);
-          }}
+          onCancel={closeEditor}
+          onDone={closeEditor}
         />
       </section>
     );

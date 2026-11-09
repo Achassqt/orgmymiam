@@ -241,7 +241,10 @@ export async function resolveIngredientFromNewProduct(
   quantity: number,
   unit?: string,
 ): Promise<RecipeIngredient & { name: string }> {
-  const created = await createProduct({ name });
+  const created = await createProduct({
+    name,
+    defaultUnit: unit?.trim() || undefined,
+  });
   return {
     productId: created.product._id,
     productSource: 'user',
@@ -461,19 +464,35 @@ export async function updateShoppingItemQuantity(
   itemId: string,
   quantity: number,
 ): Promise<ShoppingList> {
-  if (!Number.isFinite(quantity) || quantity <= 0) {
+  return updateShoppingItemFields(listId, itemId, { quantity });
+}
+
+/** Ajuste quantité et/ou unité d’une ligne de liste. */
+export async function updateShoppingItemFields(
+  listId: string,
+  itemId: string,
+  patch: { quantity?: number; unit?: string },
+): Promise<ShoppingList> {
+  if (patch.quantity != null && (!Number.isFinite(patch.quantity) || patch.quantity <= 0)) {
     throw new Error('Quantité invalide');
+  }
+  if (patch.unit != null && !patch.unit.trim()) {
+    throw new Error('Unité invalide');
   }
   const existing = await db.shoppingLists.get(listId);
   if (!existing || existing.deletedAt) {
     throw new Error('Liste introuvable');
   }
   const now = nowIso();
-  const items = existing.items.map((item) =>
-    item.id === itemId
-      ? { ...item, quantity: roundQtyLocal(quantity), updatedAt: now }
-      : item,
-  );
+  const items = existing.items.map((item) => {
+    if (item.id !== itemId) return item;
+    return {
+      ...item,
+      quantity: patch.quantity != null ? roundQtyLocal(patch.quantity) : item.quantity,
+      unit: patch.unit != null ? patch.unit.trim() : item.unit,
+      updatedAt: now,
+    };
+  });
   return updateShoppingList(listId, { items });
 }
 

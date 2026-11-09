@@ -42,6 +42,23 @@ export function formatQuantityOf(quantity: number, unit: string, name: string): 
 
 function formatQtyNumber(value: number): string {
   if (!Number.isFinite(value)) return String(value);
-  const rounded = Math.round(value * 1000) / 1000;
+  const rounded = roundQty(value);
   return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+
+/** Arrondi stable pour quantités affichées / stockées. */
+export function roundQty(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+/** Recalcule une quantité quand on change le nombre de personnes de référence. */
+export function scaleQuantity(
+  quantity: number,
+  fromServings: number,
+  toServings: number,
+): number {
+  const from = fromServings > 0 ? fromServings : 1;
+  const to = toServings > 0 ? toServings : 1;
+  if (from === to) return roundQty(quantity);
+  return roundQty((quantity * to) / from);
 }
