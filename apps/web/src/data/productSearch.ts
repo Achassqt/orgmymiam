@@ -148,3 +148,22 @@ export const CATEGORY_LABELS: Record<ProductCategory, string> = {
 export function categoryLabel(category: ProductCategory): string {
   return CATEGORY_LABELS[category] ?? category;
 }
+
+export async function lookupProductLabel(
+  productId: string,
+  source: ProductSource,
+): Promise<string> {
+  if (source === 'catalog') {
+    const item = await db.catalogProducts.get(productId);
+    return item?.name ?? 'Produit catalogue';
+  }
+  const item = await db.products.get(productId);
+  return item?.name ?? 'Produit perso';
+}
+
+export const MEAL_TYPE_LABELS: Record<string, string> = {
+  petit_dejeuner: 'Petit-déj',
+  dejeuner: 'Déjeuner',
+  diner: 'Dîner',
+  collation: 'Collation',
+};

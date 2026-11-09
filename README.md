@@ -4,7 +4,7 @@ PWA Offline-First de planification de repas et liste de courses.
 
 Monorepo npm workspaces :
 
-- `apps/web` — Vite + React 19 + Dexie + PWA + produits hybrides (Étape 3)
+- `apps/web` — Vite + React 19 + Dexie + PWA + produits + recettes/plans (Étape 4)
 - `apps/api` — API Fastify + MongoDB (auth JWT, catalogue, sync LWW)
 - `packages/shared` — types, `normalizeProductName`, schemas Zod
 
@@ -114,6 +114,7 @@ Les documents sync utilisent des **UUID v4 string** comme `_id` (pas d’ObjectI
 - `vite-plugin-pwa` (precache shell, navigation fallback, API network-only)
 - Indicateur online / offline / sync
 - **Produits** : autocomplete sur `catalogProducts ∪ products` via `normalizeProductName` (anti-doublons accents/casse)
+- **Recettes / plans** : CRUD offline avec ingrédients (autocomplete) et slots (date + mealType + recipeId)
 
 ### Tester l’anti-doublons produits
 
@@ -123,6 +124,13 @@ Les documents sync utilisent des **UUID v4 string** comme `_id` (pas d’ObjectI
 4. Créer `Sauce Maison`, puis retaper `sauce  maison` / `SAUCE MAISON` → réutilise l’existant.
 5. Hors ligne (DevTools Offline) : créer un produit inconnu → UUID local + outbox.
 
+### Tester recettes / plans offline
+
+1. DevTools → Network → **Offline**.
+2. **Recettes** → Nouvelle → titre, portions, ajouter ingrédients via autocomplete (ex. `pâtes`, `oeufs`), notes → Enregistrer.
+3. **Plans** → Nouveau → ajouter des créneaux (date + type + recette) → Enregistrer.
+4. Repasser online : outbox flush + sync ; recharger → données toujours là.
+
 ## Roadmap
 
-Prochaine livrable : **Étape 4** — recettes & meal plans.
+Prochaine livrable : **Étape 5** — liste de courses.

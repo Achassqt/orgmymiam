@@ -1,11 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { createMealPlan, softDeleteMealPlan } from '../data/crud';
+import { MealPlanEditor } from '../components/MealPlanEditor';
+import { softDeleteMealPlan } from '../data/crud';
 import { db } from '../db/database';
-
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function MealPlansPage() {
   const plans =
@@ -17,56 +14,62 @@ export function MealPlansPage() {
           .sortBy('updatedAt'),
       [],
     ) ?? [];
-  const [title, setTitle] = useState('');
-  const [startDate, setStartDate] = useState(todayIsoDate());
-  const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = plans.find((p) => p._id === selectedId) ?? null;
 
-  async function onCreate(event: FormEvent) {
-    event.preventDefault();
-    if (!title.trim()) return;
-    setBusy(true);
-    try {
-      await createMealPlan({ title, startDate });
-      setTitle('');
-    } finally {
-      setBusy(false);
-    }
+  if (mode === 'create' || (mode === 'edit' && selected)) {
+    return (
+      <section className="page-section">
+        <MealPlanEditor
+          plan={mode === 'edit' ? selected : null}
+          onCancel={() => {
+            setMode('list');
+            setSelectedId(null);
+          }}
+          onDone={() => {
+            setMode('list');
+            setSelectedId(null);
+          }}
+        />
+      </section>
+    );
   }
 
   return (
     <section className="page-section">
-      <h1>Plans de repas</h1>
-      <p className="lede">Placeholder. Slots détaillés = Étape 4.</p>
-
-      <form className="stack-form" onSubmit={(e) => void onCreate(e)}>
-        <label>
-          Titre
-          <input value={title} onChange={(e) => setTitle(e.target.value)} required />
-        </label>
-        <label>
-          Début
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            required
-          />
-        </label>
-        <button type="submit" className="primary-btn" disabled={busy}>
-          Créer un plan
+      <div className="page-heading">
+        <div>
+          <h1>Plans de repas</h1>
+          <p className="lede">
+            Planifie des créneaux (date + type de repas + recette), 100 % offline.
+          </p>
+        </div>
+        <button type="button" className="primary-btn" onClick={() => setMode('create')}>
+          Nouveau
         </button>
-      </form>
+      </div>
 
       {plans.length === 0 ? (
-        <p className="empty">Aucun plan.</p>
+        <p className="empty">Aucun plan — crée une semaine même sans réseau.</p>
       ) : (
         <ul className="entity-list">
           {plans.map((plan) => (
             <li key={plan._id}>
-              <div>
+              <button
+                type="button"
+                className="entity-main-btn"
+                onClick={() => {
+                  setSelectedId(plan._id);
+                  setMode('edit');
+                }}
+              >
                 <strong>{plan.title}</strong>
-                <span className="meta">à partir du {plan.startDate}</span>
-              </div>
+                <span className="meta">
+                  dès {plan.startDate} · {plan.slots.length}{' '}
+                  {plan.slots.length === 1 ? 'créneau' : 'créneaux'}
+                </span>
+              </button>
               <button
                 type="button"
                 className="ghost-btn"

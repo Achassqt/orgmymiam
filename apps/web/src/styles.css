@@ -39,7 +39,9 @@ a {
 }
 
 button,
-input {
+input,
+textarea,
+select {
   font: inherit;
 }
 
@@ -436,4 +438,86 @@ input {
 
 .filter-input {
   margin-bottom: 0.75rem;
+}
+
+.page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.page-heading h1 {
+  margin-bottom: 0.35rem;
+}
+
+.page-heading .lede {
+  margin-bottom: 0;
+}
+
+.entity-main-btn {
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+.editor-panel {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.editor-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.editor-actions.wrap {
+  flex-wrap: wrap;
+}
+
+.qty-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.ingredient-adder,
+.slot-adder {
+  margin-top: 0.5rem;
+  padding: 0.85rem;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(20, 35, 29, 0.06);
+}
+
+textarea,
+select {
+  width: 100%;
+  border: 1px solid rgba(20, 35, 29, 0.16);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  background: #fff;
+}
+
+textarea {
+  resize: vertical;
 }
