@@ -68,7 +68,7 @@ export const householdRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const result = await getMyHousehold(request.user!.sub);
       if (!result) {
-        return reply.code(404).send({ error: 'NOT_IN_HOUSEHOLD', message: 'Aucun foyer' });
+        return reply.send({ household: null });
       }
       return reply.send(result);
     },

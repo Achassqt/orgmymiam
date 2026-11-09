@@ -98,7 +98,7 @@ a:focus-visible {
   justify-content: space-between;
   gap: 0.75rem;
   align-items: center;
-  padding: 0.7rem 1rem;
+  padding: calc(0.7rem + env(safe-area-inset-top, 0px)) 1rem 0.7rem;
   backdrop-filter: blur(14px);
   background: rgba(255, 253, 248, 0.88);
   border-bottom: 2px solid rgba(30, 27, 75, 0.06);
@@ -115,8 +115,10 @@ a:focus-visible {
 }
 
 .burger-trigger {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 44px;
+  min-height: 44px;
   background: rgba(30, 27, 75, 0.04);
   color: var(--ink);
 }
@@ -1515,8 +1517,10 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0;
   border: 0;
   border-radius: 999px;
@@ -1680,9 +1684,11 @@ textarea {
 }
 
 .shop-item-actions .icon-btn.soft {
-  width: 1.9rem;
-  height: 1.9rem;
-  font-size: 1.05rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 1.1rem;
 }
 
 .entity-list .icon-btn.soft {
@@ -1895,7 +1901,8 @@ textarea {
   height: 100%;
   max-height: 100dvh;
   overflow: auto;
-  padding: 1rem 1rem 1.5rem;
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) 1rem
+    calc(1.5rem + env(safe-area-inset-bottom, 0px));
   background:
     radial-gradient(circle at 90% 0%, rgba(255, 212, 59, 0.35), transparent 42%),
     linear-gradient(180deg, #fffdf8 0%, #fff8ef 100%);
@@ -1932,8 +1939,10 @@ textarea {
 }
 
 .burger-close {
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 44px;
+  min-height: 44px;
   font-size: 1.55rem;
   background: rgba(30, 27, 75, 0.05);
   color: var(--ink);

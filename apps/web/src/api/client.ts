@@ -3,6 +3,7 @@ import type {
   AuthTokens,
   CatalogResponse,
   HouseholdResponse,
+  MyHouseholdResponse,
   SyncPullResponse,
   SyncPushResponse,
   SyncPushMutation,
@@ -228,8 +229,8 @@ export async function joinHouseholdRequest(code: string): Promise<HouseholdRespo
   });
 }
 
-export async function fetchMyHousehold(): Promise<HouseholdResponse> {
-  return apiRequest<HouseholdResponse>('/households/me');
+export async function fetchMyHousehold(): Promise<MyHouseholdResponse> {
+  return apiRequest<MyHouseholdResponse>('/households/me');
 }
 
 export async function leaveHouseholdRequest(): Promise<{ left: true; dissolved: boolean }> {

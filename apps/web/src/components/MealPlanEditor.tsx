@@ -5,6 +5,8 @@ import { useAuth } from '../auth/AuthProvider';
 import { buildMealSlot, createMealPlan, updateMealPlan } from '../data/crud';
 import { MEAL_TYPE_LABELS } from '../data/productSearch';
 import { db } from '../db/database';
+import { formatPlanDate, todayIsoDate } from '../lib/planDates';
+import { upsertMealSlot } from '../lib/mealSlots';
 import { VisibilityToggle } from './VisibilityToggle';
 
 interface MealPlanEditorProps {
@@ -13,14 +15,13 @@ interface MealPlanEditorProps {
   onCancel: () => void;
 }
 
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function addDays(isoDate: string, days: number): string {
   const d = new Date(`${isoDate}T12:00:00`);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function personsLabel(n: number): string {
@@ -119,33 +120,22 @@ export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) 
     }
     setError(null);
 
-    if (editingSlotId) {
-      setSlots((prev) =>
-        prev.map((slot) =>
-          slot.id === editingSlotId
-            ? {
-                ...slot,
-                date: slotDate,
-                mealType,
-                recipeId,
-                servingsOverride: override,
-              }
-            : slot,
-        ),
-      );
-      resetSlotForm(slotDate);
-      return;
-    }
+    const draft = editingSlotId
+      ? {
+          date: slotDate,
+          mealType,
+          recipeId,
+          servingsOverride: override,
+        }
+      : buildMealSlot({
+          date: slotDate,
+          mealType,
+          recipeId,
+          servingsOverride: override,
+        });
 
-    setSlots((prev) => [
-      ...prev,
-      buildMealSlot({
-        date: slotDate,
-        mealType,
-        recipeId,
-        servingsOverride: override,
-      }),
-    ]);
+    setSlots((prev) => upsertMealSlot(prev, draft, editingSlotId));
+    resetSlotForm(slotDate);
   }
 
   async function onSave() {
@@ -216,7 +206,8 @@ export function MealPlanEditor({ plan, onDone, onCancel }: MealPlanEditorProps) 
               <li key={slot.id} className={editingSlotId === slot.id ? 'is-editing' : undefined}>
                 <div>
                   <strong>
-                    {slot.date} · {MEAL_TYPE_LABELS[slot.mealType] ?? slot.mealType}
+                    {formatPlanDate(slot.date)} ·{' '}
+                    {MEAL_TYPE_LABELS[slot.mealType] ?? slot.mealType}
                   </strong>
                   <span className="meta">
                     {recipe?.title ?? 'Recette manquante'}

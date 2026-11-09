@@ -66,6 +66,11 @@ async function main() {
   const userA = a.body.user._id;
   const userB = b.body.user._id;
 
+  const meEmpty = await req<{ household: null }>('/households/me', { token: tokenA });
+  if (meEmpty.status !== 200 || meEmpty.body.household !== null) {
+    throw new Error('expected empty household 200 { household: null }');
+  }
+
   const created = await req<HouseholdResponse>('/households', {
     method: 'POST',
     token: tokenA,
@@ -167,8 +172,10 @@ async function main() {
   });
   if (leave.status !== 200) throw new Error('leave failed');
 
-  const meB2 = await req<{ error: string }>('/households/me', { token: tokenB });
-  if (meB2.status !== 404) throw new Error('expected B out of household');
+  const meB2 = await req<{ household: null }>('/households/me', { token: tokenB });
+  if (meB2.status !== 200 || meB2.body.household !== null) {
+    throw new Error('expected B out of household with 200 { household: null }');
+  }
 
   console.log('SMOKE_OK', { userA, userB, householdId, recipeId });
 

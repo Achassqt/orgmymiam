@@ -121,6 +121,10 @@ export function BurgerDrawer({ open, onClose, triggerRef }: BurgerDrawerProps) {
         </div>
 
         <nav className="burger-nav" aria-label="Compte et foyer">
+          <DrawerLink to="/produits" onNavigate={onClose} meta="Catalogue & personnalisés">
+            Produits
+          </DrawerLink>
+
           <DrawerLink to="/foyer" onNavigate={onClose} meta={foyerMeta}>
             {foyerLabel}
           </DrawerLink>
