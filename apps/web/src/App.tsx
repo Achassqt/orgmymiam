@@ -3,6 +3,7 @@ import { AuthProvider } from './auth/AuthProvider';
 import { AppLayout } from './components/AppLayout';
 import { RequireAuth } from './components/RequireAuth';
 import { ToastProvider } from './components/ToastHost';
+import { PwaInstallProvider } from './hooks/usePwaInstall';
 import { HomePage } from './pages/HomePage';
 import { HouseholdPage } from './pages/HouseholdPage';
 import { JoinHouseholdPage } from './pages/JoinHouseholdPage';
@@ -17,24 +18,26 @@ export function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/rejoindre" element={<JoinHouseholdPage />} />
-            <Route element={<RequireAuth />}>
-              <Route element={<AppLayout />}>
-                <Route index element={<HomePage />} />
-                <Route path="produits" element={<ProductsPage />} />
-                <Route path="recettes" element={<RecipesPage />} />
-                <Route path="plans" element={<MealPlansPage />} />
-                <Route path="liste" element={<ShoppingListPage />} />
-                <Route path="foyer" element={<HouseholdPage />} />
+        <PwaInstallProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/rejoindre" element={<JoinHouseholdPage />} />
+              <Route element={<RequireAuth />}>
+                <Route element={<AppLayout />}>
+                  <Route index element={<HomePage />} />
+                  <Route path="produits" element={<ProductsPage />} />
+                  <Route path="recettes" element={<RecipesPage />} />
+                  <Route path="plans" element={<MealPlansPage />} />
+                  <Route path="liste" element={<ShoppingListPage />} />
+                  <Route path="foyer" element={<HouseholdPage />} />
+                </Route>
               </Route>
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </PwaInstallProvider>
       </ToastProvider>
     </AuthProvider>
   );
