@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useSearchParams } from 'react-router-dom';
+import { EmptyState } from '../components/EmptyState';
 import { MealPlanEditor } from '../components/MealPlanEditor';
 import { softDeleteMealPlan } from '../data/crud';
 import { db } from '../db/database';
@@ -41,7 +42,7 @@ export function MealPlansPage() {
 
   if (mode === 'create' || (mode === 'edit' && selected)) {
     return (
-      <section className="page-section">
+      <section className="page-section page-enter">
         <MealPlanEditor
           plan={mode === 'edit' ? selected : null}
           onCancel={closeEditor}
@@ -52,19 +53,29 @@ export function MealPlansPage() {
   }
 
   return (
-    <section className="page-section">
+    <section className="page-section page-enter">
       <div className="page-heading">
         <div>
           <h1>Planning</h1>
-          <p className="lede">Organise les repas de la semaine : date, type et recette.</p>
+          <p className="lede">La semaine en créneaux : date, type, recette.</p>
         </div>
-        <button type="button" className="primary-btn" onClick={() => setMode('create')}>
-          Nouveau
-        </button>
+        {plans.length > 0 ? (
+          <button type="button" className="primary-btn" onClick={() => setMode('create')}>
+            Nouveau
+          </button>
+        ) : null}
       </div>
 
       {plans.length === 0 ? (
-        <p className="empty">Aucun planning — crée ta semaine.</p>
+        <EmptyState
+          title="Planifie ta semaine"
+          description="Place tes recettes sur des créneaux, puis génère la liste de courses."
+          action={
+            <button type="button" className="primary-btn" onClick={() => setMode('create')}>
+              Créer un planning
+            </button>
+          }
+        />
       ) : (
         <ul className="entity-list">
           {plans.map((plan) => (

@@ -268,7 +268,10 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
       </div>
 
       {groups.length === 0 ? (
-        <p className="empty">Aucun article — génère depuis un planning ou ajoute un produit.</p>
+        <div className="empty-state">
+          <p className="empty-state-title">Liste vide</p>
+          <p className="empty-state-desc">Ajoute un produit ci-dessous, ou reviens générer depuis un planning.</p>
+        </div>
       ) : (
         groups.map((group) => (
           <section key={group.category} className="category-block">
@@ -278,16 +281,18 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                 <li key={item.id} className={item.checked ? 'shop-item checked' : 'shop-item'}>
                   <label className="shop-check">
                     <input
+                      className="shop-check-input"
                       type="checkbox"
                       checked={item.checked}
                       disabled={busy}
                       onChange={() => void onToggle(item.id)}
                     />
-                    <span>
+                    <span className="shop-check-box" aria-hidden />
+                    <span className="shop-check-body">
                       <strong>{item.nameSnapshot}</strong>
                       <span className="meta">
                         {formatQuantity(item.quantity, item.unit)}
-                        {item.origin === 'extra' ? ' · ajouté' : ' · repas'}
+                        {item.origin === 'extra' ? ' · ajouté' : ''}
                       </span>
                     </span>
                   </label>

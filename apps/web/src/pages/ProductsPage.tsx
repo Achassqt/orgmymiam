@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { EmptyState } from '../components/EmptyState';
 import { ProductSearchBox } from '../components/ProductSearchBox';
 import { UnitSelect } from '../components/UnitSelect';
 import { adoptCatalogProduct, createProduct, softDeleteProduct } from '../data/crud';
@@ -69,9 +71,16 @@ export function ProductsPage() {
   }
 
   return (
-    <section className="page-section">
-      <h1>Produits</h1>
-      <p className="lede">Cherche un aliment, réutilise un existant ou crée-en un nouveau.</p>
+    <section className="page-section page-enter">
+      <div className="page-heading">
+        <div>
+          <h1>Produits</h1>
+          <p className="lede">Catalogue perso — aussi accessible depuis les recettes.</p>
+        </div>
+        <Link className="ghost-btn" to="/recettes">
+          ← Recettes
+        </Link>
+      </div>
 
       <div className="product-create-unit">
         <label>
@@ -85,19 +94,29 @@ export function ProductsPage() {
       {feedback ? <p className="search-notice">{feedback}</p> : null}
 
       <h2 className="subhead">Mes produits</h2>
-      <input
-        className="filter-input"
-        placeholder="Filtrer ma liste…"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
+      {products.length > 0 ? (
+        <input
+          className="filter-input"
+          placeholder="Filtrer ma liste…"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+      ) : null}
 
       {filteredMine.length === 0 ? (
-        <p className="empty">
-          {products.length === 0
-            ? 'Aucun produit — cherche ci-dessus ou crée ta première entrée.'
-            : 'Aucun résultat pour ce filtre.'}
-        </p>
+        products.length === 0 ? (
+          <EmptyState
+            title="Aucun produit encore"
+            description="Cherche ci-dessus, ou ajoute des ingrédients depuis une recette."
+            action={
+              <Link className="primary-btn" to="/recettes">
+                Aller aux recettes
+              </Link>
+            }
+          />
+        ) : (
+          <p className="empty">Aucun résultat pour ce filtre.</p>
+        )
       ) : (
         <ul className="entity-list">
           {filteredMine.map((product) => (

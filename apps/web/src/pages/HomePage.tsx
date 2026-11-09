@@ -1,10 +1,19 @@
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { EmptyState } from '../components/EmptyState';
 import { MEAL_TYPE_LABELS } from '../data/productSearch';
 import { db } from '../db/database';
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function formatMealDate(iso: string, today: string): string {
+  if (iso === today) return 'Aujourd’hui';
+  const tomorrow = new Date(`${today}T12:00:00`);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (iso === tomorrow.toISOString().slice(0, 10)) return 'Demain';
+  return iso;
 }
 
 export function HomePage() {
@@ -43,69 +52,76 @@ export function HomePage() {
   }, [today]);
 
   const latestList = openLists[0] ?? null;
+  const nextMeal = nextMeals?.[0] ?? null;
+  const checked = latestList
+    ? latestList.items.filter((i) => i.checked).length
+    : 0;
+  const total = latestList?.items.length ?? 0;
 
   return (
-    <section className="page-section">
-      <h1>Accueil</h1>
-      <p className="lede">Organise tes repas de la semaine et ta liste de courses.</p>
+    <section className="page-section home-hub">
+      <header className="home-hero">
+        <p className="brand home-brand">OrgMyMiam</p>
+        <h1>Ta semaine, sans prise de tête</h1>
+        <p className="lede">Prochain repas, planning, courses — tout au même endroit.</p>
+      </header>
 
-      <section className="home-block">
-        <h2 className="subhead">Prochains repas</h2>
-        {!nextMeals || nextMeals.length === 0 ? (
-          <p className="empty">
-            Aucun repas prévu —{' '}
-            <Link to="/plans">crée un planning</Link>
-            {recipesCount === 0 ? (
-              <>
-                {' '}
-                ou <Link to="/recettes">ajoute une recette</Link>
-              </>
-            ) : null}
-            .
-          </p>
-        ) : (
-          <ul className="entity-list">
-            {nextMeals.map((slot) => (
-              <li key={slot.id}>
-                <Link className="entity-main-btn" to={`/plans?edit=${slot.planId}`}>
-                  <strong>{slot.recipeTitle}</strong>
-                  <span className="meta">
-                    {slot.date} · {MEAL_TYPE_LABELS[slot.mealType] ?? slot.mealType}
-                    {slot.servingsOverride != null ? ` · ${slot.servingsOverride} pers.` : ''}
-                    {' · '}
-                    {slot.planTitle}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="quick-links">
-          <Link to="/plans">Voir le planning</Link>
-          <Link to="/recettes">Mes recettes</Link>
-        </div>
-      </section>
-
-      <section className="home-block">
-        <h2 className="subhead">Liste de courses</h2>
-        {latestList ? (
-          <p className="home-highlight">
-            <Link to="/liste">{latestList.title}</Link>
-            <span className="meta">
-              {' '}
-              · {latestList.items.filter((i) => i.checked).length}/{latestList.items.length} cochés
+      <section className="home-block" aria-labelledby="next-meal-heading">
+        <h2 id="next-meal-heading" className="subhead">
+          Prochain repas
+        </h2>
+        {!nextMeals ? (
+          <p className="empty">Chargement…</p>
+        ) : nextMeal ? (
+          <Link className="hub-card" to={`/plans?edit=${nextMeal.planId}`}>
+            <span className="hub-card-kicker">
+              {formatMealDate(nextMeal.date, today)} ·{' '}
+              {MEAL_TYPE_LABELS[nextMeal.mealType] ?? nextMeal.mealType}
             </span>
-          </p>
+            <strong className="hub-card-title">{nextMeal.recipeTitle}</strong>
+            <span className="meta">
+              {nextMeal.servingsOverride != null
+                ? `${nextMeal.servingsOverride} pers. · `
+                : ''}
+              {nextMeal.planTitle}
+            </span>
+          </Link>
         ) : (
-          <p className="empty">
-            Pas de liste ouverte — <Link to="/liste">génère-en une depuis un plan</Link>.
-          </p>
+          <EmptyState
+            title="Aucun repas prévu"
+            description={
+              recipesCount === 0
+                ? 'Commence par une recette, puis place-la dans le planning.'
+                : 'Ajoute un créneau pour voir le prochain plat ici.'
+            }
+            action={
+              <Link className="primary-btn" to={recipesCount === 0 ? '/recettes' : '/plans'}>
+                {recipesCount === 0 ? 'Ajouter une recette' : 'Ajouter un repas'}
+              </Link>
+            }
+          />
         )}
-        <div className="quick-links">
-          <Link to="/liste">Ouvrir les courses</Link>
-          <Link to="/produits">Mes produits</Link>
-        </div>
       </section>
+
+      <div className="hub-cta-row">
+        <Link className="primary-btn hub-cta" to="/liste">
+          Faire mes courses
+          {latestList && total > 0 ? (
+            <span className="hub-cta-meta">
+              {checked}/{total}
+            </span>
+          ) : null}
+        </Link>
+        <Link className="secondary-btn hub-cta" to="/plans">
+          Ajouter un repas
+        </Link>
+      </div>
+
+      {latestList ? (
+        <p className="home-list-hint">
+          Liste ouverte : <Link to="/liste">{latestList.title}</Link>
+        </p>
+      ) : null}
     </section>
   );
 }

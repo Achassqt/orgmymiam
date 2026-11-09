@@ -105,7 +105,7 @@ Ouvre [http://localhost:5173](http://localhost:5173). Les appels `/api/*` sont p
 
 ## Front (Étapes 2–6 + UX)
 
-- Routing mobile + layout (bottom nav : Accueil, Produits, Recettes, Planning, Courses)
+- Routing mobile + layout (bottom nav : Accueil, Recettes, Planning, Courses — Produits en secondaire)
 - Auth UI login/register
 - Stockage local + file d’attente → sauvegarde serveur
 - PWA installable

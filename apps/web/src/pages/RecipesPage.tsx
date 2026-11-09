@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { EmptyState } from '../components/EmptyState';
 import { RecipeEditor } from '../components/RecipeEditor';
 import { softDeleteRecipe } from '../data/crud';
 import { db } from '../db/database';
@@ -21,7 +23,7 @@ export function RecipesPage() {
 
   if (mode === 'create' || (mode === 'edit' && selected)) {
     return (
-      <section className="page-section">
+      <section className="page-section page-enter">
         <RecipeEditor
           recipe={mode === 'edit' ? selected : null}
           onCancel={() => {
@@ -38,19 +40,29 @@ export function RecipesPage() {
   }
 
   return (
-    <section className="page-section">
+    <section className="page-section page-enter">
       <div className="page-heading">
         <div>
           <h1>Recettes</h1>
-          <p className="lede">Tes plats avec portions et ingrédients.</p>
+          <p className="lede">Tes plats, portions et ingrédients.</p>
         </div>
-        <button type="button" className="primary-btn" onClick={() => setMode('create')}>
-          Nouvelle
-        </button>
+        {recipes.length > 0 ? (
+          <button type="button" className="primary-btn" onClick={() => setMode('create')}>
+            Nouvelle
+          </button>
+        ) : null}
       </div>
 
       {recipes.length === 0 ? (
-        <p className="empty">Aucune recette — crée ta première.</p>
+        <EmptyState
+          title="Ta première recette"
+          description="Ajoute un plat avec ses portions — les courses suivront."
+          action={
+            <button type="button" className="primary-btn" onClick={() => setMode('create')}>
+              Créer une recette
+            </button>
+          }
+        />
       ) : (
         <ul className="entity-list">
           {recipes.map((recipe) => (
@@ -81,6 +93,10 @@ export function RecipesPage() {
           ))}
         </ul>
       )}
+
+      <p className="page-footnote">
+        Gérer le catalogue ? <Link to="/produits">Produits</Link>
+      </p>
     </section>
   );
 }
