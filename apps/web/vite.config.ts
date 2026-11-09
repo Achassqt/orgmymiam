@@ -12,8 +12,8 @@ export default defineConfig({
         name: 'OrgMyMiam',
         short_name: 'OrgMyMiam',
         description: 'Planification de repas et liste de courses offline-first',
-        theme_color: '#1f6b52',
-        background_color: '#eef6f2',
+        theme_color: '#3B82F6',
+        background_color: '#FFF8EF',
         display: 'standalone',
         lang: 'fr',
         start_url: '/',
@@ -57,6 +57,7 @@ export default defineConfig({
     }),
   ],
   server: {
+    host: '127.0.0.1',
     port: 5173,
     proxy: {
       '/api': {
