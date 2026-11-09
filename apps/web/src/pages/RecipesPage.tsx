@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useAuth } from '../auth/AuthProvider';
 import { EmptyState } from '../components/EmptyState';
+import { TrashIcon } from '../components/icons';
 import { PullToRefresh } from '../components/PullToRefresh';
 import { RecipeEditor } from '../components/RecipeEditor';
 import { HouseholdBadge } from '../components/VisibilityToggle';
@@ -103,10 +104,15 @@ export function RecipesPage() {
                 </button>
                 <button
                   type="button"
-                  className="ghost-btn"
-                  onClick={() => void softDeleteRecipe(recipe._id)}
+                  className="icon-btn soft"
+                  aria-label={`Supprimer ${recipe.title}`}
+                  title="Supprimer"
+                  onClick={() => {
+                    if (!window.confirm(`Supprimer « ${recipe.title} » ?`)) return;
+                    void softDeleteRecipe(recipe._id);
+                  }}
                 >
-                  Suppr.
+                  <TrashIcon />
                 </button>
               </li>
             ))}

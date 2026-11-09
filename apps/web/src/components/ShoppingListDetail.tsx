@@ -26,6 +26,7 @@ import {
 } from '../lib/shoppingListShare';
 import { formatQuantity } from '../lib/units';
 import { runSync } from '../sync/engine';
+import { ActionMenu, ActionMenuItem } from './ActionMenu';
 import { ProductSearchBox } from './ProductSearchBox';
 import { useToast } from './ToastHost';
 import { UnitSelect } from './UnitSelect';
@@ -39,6 +40,8 @@ interface ShoppingListDetailProps {
 type PendingDraft =
   | { kind: 'hit'; hit: ProductHit; quantity: string; unit: string }
   | { kind: 'create'; name: string; quantity: string; unit: string };
+
+type ItemFilter = 'active' | 'all';
 
 export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) {
   const { session } = useAuth();
@@ -85,7 +88,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
   const [pending, setPending] = useState<PendingDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [showChecked, setShowChecked] = useState(true);
+  const [itemFilter, setItemFilter] = useState<ItemFilter>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editQty, setEditQty] = useState('');
   const [editUnit, setEditUnit] = useState('unité');
@@ -102,9 +105,10 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
 
   const groups = useMemo(() => {
     if (!list) return [];
-    const items = showChecked ? list.items : list.items.filter((i) => !i.checked);
+    const items =
+      itemFilter === 'all' ? list.items : list.items.filter((i) => !i.checked);
     return groupItemsByCategory(items);
-  }, [list, showChecked]);
+  }, [list, itemFilter]);
 
   const printGroups = useMemo(() => {
     if (!list) return [];
@@ -112,9 +116,10 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
   }, [list]);
 
   const progress = useMemo(() => {
-    if (!list || list.items.length === 0) return { done: 0, total: 0 };
+    if (!list || list.items.length === 0) return { done: 0, total: 0, pct: 0 };
     const done = list.items.filter((i) => i.checked).length;
-    return { done, total: list.items.length };
+    const total = list.items.length;
+    return { done, total, pct: Math.round((done / total) * 100) };
   }, [list]);
 
   if (list === undefined) {
@@ -291,6 +296,11 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     window.print();
   }
 
+  function onDeleteList() {
+    if (!window.confirm('Supprimer cette liste de courses ?')) return;
+    void softDeleteShoppingList(listId).then(onBack);
+  }
+
   const pendingName = pending
     ? pending.kind === 'hit'
       ? pending.hit.name
@@ -301,16 +311,25 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     <div className="editor-panel shopping-list-detail">
       <div className="no-print">
         <div className="editor-header">
-          <button type="button" className="ghost-btn" onClick={onBack}>
-            ← Listes
+          <button type="button" className="back-link" onClick={onBack}>
+            ← Retour
           </button>
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={() => void softDeleteShoppingList(listId).then(onBack)}
-          >
-            Suppr.
-          </button>
+          <ActionMenu label="Autres actions">
+            <ActionMenuItem onSelect={() => void onCloseList()}>
+              {list.status === 'open' ? 'Marquer terminée' : 'Rouvrir'}
+            </ActionMenuItem>
+            {list.mealPlanId ? (
+              <ActionMenuItem
+                disabled={busy}
+                onSelect={() => void onRegenerate()}
+              >
+                Mettre à jour depuis le planning
+              </ActionMenuItem>
+            ) : null}
+            <ActionMenuItem danger onSelect={onDeleteList}>
+              Supprimer
+            </ActionMenuItem>
+          </ActionMenu>
         </div>
 
         <h1>
@@ -326,12 +345,26 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
           id={list._id}
           value={list.visibility ?? 'private'}
         />
-        <p className="lede">
-          {list.status === 'open' ? 'Ouverte' : 'Terminée'}
-          {planInfo ? ` · planning « ${planInfo.title} »` : ' · sans planning'}
-          {' · '}
-          {progress.done}/{progress.total} cochés
-        </p>
+        <div className="list-status-row">
+          <p className="lede list-status-lede">
+            {list.status === 'open' ? 'Ouverte' : 'Terminée'}
+            {planInfo ? ` · planning « ${planInfo.title} »` : ' · sans planning'}
+          </p>
+          <div
+            className="progress-pill"
+            role="status"
+            aria-label={`${progress.done} sur ${progress.total} cochés`}
+          >
+            <span
+              className="progress-pill-bar"
+              style={{ width: `${progress.pct}%` }}
+              aria-hidden
+            />
+            <span className="progress-pill-label">
+              {progress.done}/{progress.total} cochés
+            </span>
+          </div>
+        </div>
         {planInfo ? (
           <p className="portions-banner" role="status">
             {planInfo.portionsHint}
@@ -358,30 +391,40 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
           </button>
         </div>
 
-        <div className="editor-actions wrap">
-          <button type="button" className="ghost-btn" onClick={() => setShowChecked((v) => !v)}>
-            {showChecked ? 'Masquer cochés' : 'Afficher cochés'}
+        <div
+          className="segmented"
+          role="group"
+          aria-label="Filtrer les articles"
+        >
+          <button
+            type="button"
+            className={itemFilter === 'active' ? 'segmented-btn active' : 'segmented-btn'}
+            aria-pressed={itemFilter === 'active'}
+            onClick={() => setItemFilter('active')}
+          >
+            En cours
           </button>
-          {list.mealPlanId ? (
-            <button
-              type="button"
-              className="ghost-btn"
-              disabled={busy}
-              onClick={() => void onRegenerate()}
-            >
-              Mettre à jour depuis le planning
-            </button>
-          ) : null}
-          <button type="button" className="ghost-btn" onClick={() => void onCloseList()}>
-            {list.status === 'open' ? 'Marquer terminée' : 'Rouvrir'}
+          <button
+            type="button"
+            className={itemFilter === 'all' ? 'segmented-btn active' : 'segmented-btn'}
+            aria-pressed={itemFilter === 'all'}
+            onClick={() => setItemFilter('all')}
+          >
+            Tout
           </button>
         </div>
 
         {groups.length === 0 ? (
           <div className="empty-state">
-            <p className="empty-state-title">Liste vide</p>
+            <p className="empty-state-title">
+              {itemFilter === 'active' && progress.total > 0
+                ? 'Tout est coché'
+                : 'Liste vide'}
+            </p>
             <p className="empty-state-desc">
-              Ajoute un produit ci-dessous, ou reviens générer depuis un planning.
+              {itemFilter === 'active' && progress.total > 0
+                ? 'Passe sur « Tout » pour revoir les articles cochés.'
+                : 'Ajoute un produit ci-dessous, ou reviens générer depuis un planning.'}
             </p>
           </div>
         ) : (
@@ -446,19 +489,23 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                       ) : (
                         <button
                           type="button"
-                          className="ghost-btn"
+                          className="icon-btn soft"
                           disabled={busy}
+                          aria-label={`Modifier la quantité de ${item.nameSnapshot}`}
+                          title="Quantité"
                           onClick={() => startEdit(item.id, item.quantity, item.unit)}
                         >
-                          Qté
+                          <QtyIcon />
                         </button>
                       )}
                       <button
                         type="button"
-                        className="ghost-btn"
+                        className="icon-btn soft"
+                        aria-label={`Retirer ${item.nameSnapshot}`}
+                        title="Retirer"
                         onClick={() => void removeShoppingItem(listId, item.id)}
                       >
-                        ×
+                        <span aria-hidden>×</span>
                       </button>
                     </div>
                   </li>
@@ -574,5 +621,16 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
         )}
       </div>
     </div>
+  );
+}
+
+function QtyIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden focusable="false">
+      <path
+        d="M3.5 11.7 11.2 4l1.8 1.8-7.7 7.7H3.5v-1.8Zm8.2-8.9.9-.9a1.2 1.2 0 0 1 1.7 0l.8.8a1.2 1.2 0 0 1 0 1.7l-.9.9-1.8-1.8Z"
+        fill="currentColor"
+      />
+    </svg>
   );
 }
