@@ -6,7 +6,7 @@ const NAV: Array<{ to: string; label: string; end?: boolean }> = [
   { to: '/', label: 'Accueil', end: true },
   { to: '/produits', label: 'Produits' },
   { to: '/recettes', label: 'Recettes' },
-  { to: '/plans', label: 'Plans' },
+  { to: '/plans', label: 'Planning' },
   { to: '/liste', label: 'Courses' },
 ];
 

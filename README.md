@@ -1,12 +1,12 @@
 # OrgMyMiam
 
-PWA Offline-First de planification de repas et liste de courses.
+PWA de planification de repas et liste de courses (fonctionne aussi hors ligne).
 
 Monorepo npm workspaces :
 
-- `apps/web` — Vite + React 19 + Dexie + PWA (Étapes 2–6, offline durci)
-- `apps/api` — API Fastify + MongoDB (auth JWT, catalogue, sync LWW)
-- `packages/shared` — types, `normalizeProductName`, schemas Zod
+- `apps/web` — Vite + React 19 + stockage local + PWA (Étapes 2–6)
+- `apps/api` — API Fastify + MongoDB (auth JWT, catalogue, sync)
+- `packages/shared` — types, normalisation des noms, schemas Zod
 
 ## Prérequis
 
@@ -75,10 +75,10 @@ Ouvre [http://localhost:5173](http://localhost:5173). Les appels `/api/*` sont p
 ### Tester le mode offline
 
 1. Créer un compte / se connecter (nécessite l’API online une première fois).
-2. Vérifier que le catalogue se charge (accueil).
-3. Ajouter un produit ou une recette → visible immédiatement (Dexie) ; l’indicateur de sync doit remonter l’outbox puis repasser « À jour ».
-4. Dans DevTools → Network → **Offline**, ajouter encore des éléments : UI OK, outbox > 0, indicateur « Hors ligne ».
-5. Repasser online : flush `POST /sync/push` + pull automatique.
+2. Vérifier l’accueil (prochains repas / accès courses).
+3. Ajouter un produit ou une recette → visible immédiatement ; l’indicateur doit passer à « Enregistré » (ou « Sauvegarde… » puis « Enregistré »).
+4. Dans DevTools → Network → **Offline**, ajouter encore des éléments : UI OK, indicateur « Hors ligne — sera sauvegardé plus tard » (ou « Hors ligne »).
+5. Repasser online : sauvegarde automatique.
 6. Build installable : `npm run build -w @orgmymiam/web && npm run preview -w @orgmymiam/web` puis « Installer l’app » (manifest + service worker).
 
 ## Scripts utiles
@@ -100,57 +100,53 @@ Ouvre [http://localhost:5173](http://localhost:5173). Les appels `/api/*` sont p
 | `POST` | `/auth/login` | non | Login → access + refresh JWT |
 | `POST` | `/auth/refresh` | non | Rotation refresh token |
 | `GET` | `/catalog?sinceVersion=` | oui | Catalogue socle |
-| `POST` | `/sync/push` | oui | Push mutations (LWW + tombstones) |
+| `POST` | `/sync/push` | oui | Push mutations |
 | `GET` | `/sync/pull?since=&deviceId=` | oui | Pull changements depuis cursor |
 
-Les documents sync utilisent des **UUID v4 string** comme `_id` (pas d’ObjectId Mongo).
+## Front (Étapes 2–6 + UX)
 
-## Front (Étapes 2–6)
-
-- Routing mobile + layout (bottom nav)
-- Auth UI login/register branchée API
-- Dexie : `meta`, `catalogProducts`, `products`, `recipes`, `mealPlans`, `shoppingLists`, `outbox`
-- CRUD local optimiste + outbox → sync push/pull
-- `vite-plugin-pwa` (precache shell, navigation fallback, API network-only)
-- Indicateur online / offline / sync
-- **Produits** : autocomplete sur `catalogProducts ∪ products` via `normalizeProductName` (anti-doublons accents/casse)
-- **Recettes / plans** : CRUD offline avec ingrédients (autocomplete) et slots (date + mealType + recipeId)
-- **Liste de courses** : génération consolidée depuis un plan, extras, cochage offline, regroupement par catégorie
-- **Sync durcie** : indicateur hors ligne / sync / à jour / erreur, retry outbox (backoff), LWW client (items liste), reprise online/focus
+- Routing mobile + layout (bottom nav : Accueil, Produits, Recettes, Planning, Courses)
+- Auth UI login/register
+- Stockage local + file d’attente → sauvegarde serveur
+- PWA installable
+- Indicateur : « Enregistré », « Hors ligne — sera sauvegardé plus tard », « Sauvegarde… », « Erreur — réessayer »
+- **Produits** : recherche + anti-doublons, sans jargon technique
+- **Recettes / planning** : portions (« pour N personnes »), ingrédients avec sélecteur d’unités
+- **Liste de courses** : génération depuis un planning (quantités adaptées aux portions), ajustement de quantité, extras, cochage hors ligne
 
 ### Tester l’anti-doublons produits
 
-1. Se connecter (catalogue syncé localement).
-2. Aller sur **Produits**, taper par ex. `LAIT DEMI-ECREME` ou `lait demi-écrémé` → suggestion catalogue + match exact.
-3. Valider → adoption / réutilisation, **pas** de second produit.
+1. Se connecter.
+2. Aller sur **Produits**, taper par ex. `LAIT DEMI-ECREME` ou `lait demi-écrémé` → suggestion + réutilisation.
+3. Valider → pas de second produit.
 4. Créer `Sauce Maison`, puis retaper `sauce  maison` / `SAUCE MAISON` → réutilise l’existant.
-5. Hors ligne (DevTools Offline) : créer un produit inconnu → UUID local + outbox.
+5. Hors ligne (DevTools Offline) : créer un produit inconnu → reste disponible localement, puis se sauvegarde au retour online.
 
-### Tester recettes / plans offline
+### Tester recettes / planning
 
 1. DevTools → Network → **Offline**.
-2. **Recettes** → Nouvelle → titre, portions, ajouter ingrédients via autocomplete (ex. `pâtes`, `oeufs`), notes → Enregistrer.
-3. **Plans** → Nouveau → ajouter des créneaux (date + type + recette) → Enregistrer.
-4. Repasser online : outbox flush + sync ; recharger → données toujours là.
+2. **Recettes** → Nouvelle → titre, « pour combien de personnes », ingrédients (Quantité + Unité via sélecteur, ex. 400 g de pâtes) → Enregistrer.
+3. **Planning** → Nouveau → ajouter des repas (date + type + recette, portions optionnelles) → Enregistrer.
+4. Repasser online : sauvegarde ; recharger → données toujours là.
 
 ### Tester liste de courses
 
-1. Avoir un plan avec recettes + ingrédients.
-2. **Courses** → choisir le plan → **Générer la liste** (quantités × servings / override, consolidées productId+unit).
-3. Ajouter un extra (ex. `éponge`) via autocomplete.
-4. DevTools Offline → cocher/décocher → outbox ; online → sync.
+1. Avoir un planning avec recettes + ingrédients.
+2. **Courses** → choisir le planning → lire l’aide portions → **Générer la liste**.
+3. Ajuster une quantité via **Qté** sur une ligne ; ajouter un produit (ex. `éponge`).
+4. DevTools Offline → cocher/décocher → indicateur hors ligne ; online → « Sauvegarde… » puis « Enregistré ».
 
-### Smoke E2E offline → online (Étape 6)
+### Smoke E2E offline → online
 
-1. Online : créer produit + recette + plan, générer une liste de courses.
+1. Online : créer produit + recette + planning, générer une liste de courses.
 2. DevTools → **Offline**.
-3. Cocher/décocher plusieurs articles ; éventuellement ajouter un extra.
-4. Vérifier l’indicateur « Hors ligne · N en attente ».
-5. Repasser **Online** : « Sync en cours… » puis « À jour » ; cochages conservés ; outbox vide.
-6. Recharger la page : état inchangé (Dexie + sync).
+3. Cocher/décocher plusieurs articles ; éventuellement ajouter un produit ; modifier une quantité.
+4. Vérifier l’indicateur « Hors ligne — sera sauvegardé plus tard » (ou « Hors ligne »).
+5. Repasser **Online** : « Sauvegarde… » puis « Enregistré » ; cochages et quantités conservés.
+6. Recharger la page : état inchangé.
 
 Hors MVP : partage multi-user / temps réel (Étape 7 du plan).
 
 ## Roadmap
 
-MVP offline-first couvert jusqu’à l’Étape 6. Suite possible : **Étape 7** — préparation partage 2 users.
+MVP offline couvert jusqu’à l’Étape 6 + passe UX copy/unités. Suite possible : **Étape 7** — préparation partage 2 users.

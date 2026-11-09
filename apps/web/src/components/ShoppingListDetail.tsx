@@ -6,6 +6,7 @@ import {
   removeShoppingItem,
   softDeleteShoppingList,
   toggleShoppingItem,
+  updateShoppingItemQuantity,
   updateShoppingList,
 } from '../data/crud';
 import type { ProductHit } from '../data/productSearch';
@@ -15,7 +16,9 @@ import {
   regenerateMealItems,
 } from '../data/shoppingList';
 import { db } from '../db/database';
+import { formatQuantity } from '../lib/units';
 import { ProductSearchBox } from './ProductSearchBox';
+import { UnitSelect } from './UnitSelect';
 
 interface ShoppingListDetailProps {
   listId: string;
@@ -24,10 +27,21 @@ interface ShoppingListDetailProps {
 
 export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) {
   const list = useLiveQuery(() => db.shoppingLists.get(listId), [listId]);
-  const planTitle = useLiveQuery(async () => {
+  const planInfo = useLiveQuery(async () => {
     if (!list?.mealPlanId) return null;
     const plan = await db.mealPlans.get(list.mealPlanId);
-    return plan?.title ?? null;
+    if (!plan) return null;
+    const servings = plan.slots
+      .map((slot) => slot.servingsOverride)
+      .filter((n): n is number => n != null && n > 0);
+    const unique = [...new Set(servings)];
+    return {
+      title: plan.title,
+      portionsHint:
+        unique.length === 1
+          ? `Quantités pour ${unique[0]} personne${unique[0] === 1 ? '' : 's'} (selon le planning)`
+          : 'Quantités selon les portions de chaque repas du planning',
+    };
   }, [list?.mealPlanId]);
 
   const [quantity, setQuantity] = useState('1');
@@ -35,6 +49,8 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [showChecked, setShowChecked] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editQty, setEditQty] = useState('');
 
   const groups = useMemo(() => {
     if (!list) return [];
@@ -80,10 +96,11 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     setBusy(true);
     setFeedback(null);
     try {
-      const item = await buildExtraItemFromHit(hit, qty, unit);
+      const nextUnit = hit.defaultUnit || unit;
+      const item = await buildExtraItemFromHit(hit, qty, nextUnit);
       await addExtraItemToList(listId, item);
-      setFeedback(`Extra ajouté : ${hit.name}`);
-      setUnit(hit.defaultUnit);
+      setFeedback(`Ajouté : ${hit.name}`);
+      setUnit(nextUnit);
     } finally {
       setBusy(false);
     }
@@ -110,7 +127,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
       };
       const item = await buildExtraItemFromHit(hit, qty, unit || created.product.defaultUnit);
       await addExtraItemToList(listId, item);
-      setFeedback(`Extra créé : ${created.product.name}`);
+      setFeedback(`Ajouté : ${created.product.name}`);
     } finally {
       setBusy(false);
     }
@@ -121,9 +138,9 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     setFeedback(null);
     try {
       await regenerateMealItems(listId);
-      setFeedback('Lignes repas régénérées (extras conservés).');
+      setFeedback('Articles du planning mis à jour (ajouts manuels conservés).');
     } catch (err) {
-      setFeedback(err instanceof Error ? err.message : 'Régénération impossible');
+      setFeedback(err instanceof Error ? err.message : 'Mise à jour impossible');
     } finally {
       setBusy(false);
     }
@@ -135,6 +152,29 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     await updateShoppingList(listId, {
       status: current.status === 'open' ? 'closed' : 'open',
     });
+  }
+
+  function startEditQty(itemId: string, current: number) {
+    setEditingId(itemId);
+    setEditQty(String(current));
+  }
+
+  async function saveEditQty(itemId: string) {
+    const qty = Number(editQty);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      setFeedback('Quantité invalide');
+      return;
+    }
+    setBusy(true);
+    setFeedback(null);
+    try {
+      await updateShoppingItemQuantity(listId, itemId, qty);
+      setEditingId(null);
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : 'Modification impossible');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -154,11 +194,12 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
 
       <h1>{list.title}</h1>
       <p className="lede">
-        {list.status === 'open' ? 'Ouverte' : 'Clôturée'}
-        {planTitle ? ` · plan « ${planTitle} »` : ' · sans plan'}
+        {list.status === 'open' ? 'Ouverte' : 'Terminée'}
+        {planInfo ? ` · planning « ${planInfo.title} »` : ' · sans planning'}
         {' · '}
         {progress.done}/{progress.total} cochés
       </p>
+      {planInfo ? <p className="field-help">{planInfo.portionsHint}</p> : null}
 
       <div className="editor-actions wrap">
         <button type="button" className="ghost-btn" onClick={() => setShowChecked((v) => !v)}>
@@ -166,16 +207,16 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
         </button>
         {list.mealPlanId ? (
           <button type="button" className="ghost-btn" disabled={busy} onClick={() => void onRegenerate()}>
-            Régénérer repas
+            Mettre à jour depuis le planning
           </button>
         ) : null}
         <button type="button" className="ghost-btn" onClick={() => void onCloseList()}>
-          {list.status === 'open' ? 'Clôturer' : 'Rouvrir'}
+          {list.status === 'open' ? 'Marquer terminée' : 'Rouvrir'}
         </button>
       </div>
 
       {groups.length === 0 ? (
-        <p className="empty">Aucun article — génère depuis un plan ou ajoute un extra.</p>
+        <p className="empty">Aucun article — génère depuis un planning ou ajoute un produit.</p>
       ) : (
         groups.map((group) => (
           <section key={group.category} className="category-block">
@@ -193,18 +234,55 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                     <span>
                       <strong>{item.nameSnapshot}</strong>
                       <span className="meta">
-                        {item.quantity} {item.unit}
-                        {item.origin === 'extra' ? ' · extra' : ' · repas'}
+                        {formatQuantity(item.quantity, item.unit)}
+                        {item.origin === 'extra' ? ' · ajouté' : ' · repas'}
                       </span>
                     </span>
                   </label>
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    onClick={() => void removeShoppingItem(listId, item.id)}
-                  >
-                    ×
-                  </button>
+                  <div className="shop-item-actions">
+                    {editingId === item.id ? (
+                      <span className="qty-edit">
+                        <input
+                          value={editQty}
+                          onChange={(e) => setEditQty(e.target.value)}
+                          inputMode="decimal"
+                          aria-label={`Quantité pour ${item.nameSnapshot}`}
+                          disabled={busy}
+                        />
+                        <button
+                          type="button"
+                          className="ghost-btn"
+                          disabled={busy}
+                          onClick={() => void saveEditQty(item.id)}
+                        >
+                          OK
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost-btn"
+                          onClick={() => setEditingId(null)}
+                        >
+                          Annuler
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="ghost-btn"
+                        disabled={busy}
+                        onClick={() => startEditQty(item.id, item.quantity)}
+                      >
+                        Qté
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      onClick={() => void removeShoppingItem(listId, item.id)}
+                    >
+                      ×
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -213,17 +291,18 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
       )}
 
       <div className="ingredient-adder">
-        <h3 className="subhead">Ajouter un extra</h3>
+        <h3 className="subhead">Ajouter un produit</h3>
         <div className="qty-row">
           <label>
-            Qté
+            Quantité
             <input value={quantity} onChange={(e) => setQuantity(e.target.value)} inputMode="decimal" />
           </label>
           <label>
             Unité
-            <input value={unit} onChange={(e) => setUnit(e.target.value)} />
+            <UnitSelect value={unit} onChange={setUnit} />
           </label>
         </div>
+        <p className="field-help">L’unité se préremplit selon le produit choisi.</p>
         <ProductSearchBox
           busy={busy}
           compact

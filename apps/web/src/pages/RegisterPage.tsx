@@ -39,7 +39,7 @@ export function RegisterPage() {
       <div className="auth-card">
         <p className="brand">OrgMyMiam</p>
         <h1>Créer un compte</h1>
-        <p className="lede">Un compte pour synchroniser et préparer le partage futur.</p>
+        <p className="lede">Un compte pour retrouver tes recettes et listes sur cet appareil.</p>
         <form onSubmit={(e) => void onSubmit(e)} className="stack-form">
           <label>
             Prénom / pseudo

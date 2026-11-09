@@ -16,30 +16,34 @@ export function SyncIndicator() {
     return () => window.clearTimeout(t);
   }, [notice]);
 
-  let label = 'À jour';
+  let label = 'Enregistré';
   let tone: 'ok' | 'warn' | 'bad' | 'muted' = 'ok';
-  let title = 'Synchronisation à jour — cliquer pour forcer';
+  let title = 'Tout est enregistré — cliquer pour vérifier';
 
   if (!online || status === 'offline') {
-    label = outboxCount > 0 ? `Hors ligne · ${outboxCount} en attente` : 'Hors ligne';
+    label =
+      outboxCount > 0 ? 'Hors ligne — sera sauvegardé plus tard' : 'Hors ligne';
     tone = 'warn';
-    title = 'Pas de réseau — les changements restent en local';
+    title =
+      outboxCount > 0
+        ? 'Pas de réseau — tes changements seront enregistrés au retour'
+        : 'Pas de réseau';
   } else if (status === 'syncing') {
-    label = outboxCount > 0 ? `Sync en cours · ${outboxCount}` : 'Sync en cours…';
+    label = 'Sauvegarde…';
     tone = 'muted';
-    title = 'Synchronisation avec le serveur…';
+    title = 'Enregistrement en cours…';
   } else if (status === 'error') {
-    label = lastError ? `Erreur · ${truncate(lastError, 28)}` : 'Erreur de sync';
+    label = 'Erreur — réessayer';
     tone = 'bad';
-    title = lastError ?? 'Erreur de synchronisation — cliquer pour réessayer';
+    title = lastError ?? 'Erreur d’enregistrement — cliquer pour réessayer';
   } else if (deadLetterCount > 0) {
-    label = `${deadLetterCount} échec(s) sync`;
+    label = 'Erreur — réessayer';
     tone = 'bad';
-    title = 'Certaines mutations ont dépassé le nombre de tentatives';
+    title = 'Certains changements n’ont pas pu être enregistrés — cliquer pour réessayer';
   } else if (outboxCount > 0) {
-    label = `${outboxCount} à synchroniser`;
+    label = 'Sauvegarde…';
     tone = 'warn';
-    title = 'Mutations en file — cliquer pour pousser maintenant';
+    title = 'Enregistrement en attente — cliquer pour pousser maintenant';
   }
 
   return (
@@ -57,8 +61,4 @@ export function SyncIndicator() {
       {showNotice && notice ? <p className="sync-toast">{notice}</p> : null}
     </div>
   );
-}
-
-function truncate(value: string, max: number): string {
-  return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }

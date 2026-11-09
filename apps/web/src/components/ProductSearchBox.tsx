@@ -6,6 +6,7 @@ import {
   searchProductHits,
   type ProductHit,
 } from '../data/productSearch';
+import { unitDisplayLabel } from '../lib/units';
 
 export interface ProductSearchBoxProps {
   busy?: boolean;
@@ -16,7 +17,7 @@ export interface ProductSearchBoxProps {
   addLabel?: string;
   /** Libellé du bouton submit sur match exact */
   reuseLabel?: string;
-  /** Masquer les hints de normalisation */
+  /** Mode compact (éditeurs) */
   compact?: boolean;
 }
 
@@ -74,11 +75,7 @@ export function ProductSearchBox({
     if (!query.trim() || busy) return;
 
     if (result.exactMatch) {
-      setNotice(
-        result.exactMatch.source === 'catalog'
-          ? `Déjà au catalogue : « ${result.exactMatch.name} » — réutilisation.`
-          : `Déjà dans tes produits : « ${result.exactMatch.name} ».`,
-      );
+      setNotice(`Produit trouvé : « ${result.exactMatch.name} ».`);
       await submitSelect(result.exactMatch);
       return;
     }
@@ -135,7 +132,6 @@ export function ProductSearchBox({
             }}
             onFocus={() => setOpen(true)}
             onBlur={() => {
-              // Laisse le temps au clic suggestion
               window.setTimeout(() => setOpen(false), 120);
             }}
             onKeyDown={onKeyDown}
@@ -157,7 +153,7 @@ export function ProductSearchBox({
                         onClick={() => void submitCreate(option.name)}
                       >
                         Créer « {option.name} »
-                        <span className="meta">nouveau produit perso</span>
+                        <span className="meta">nouveau produit</span>
                       </button>
                     </li>
                   );
@@ -175,13 +171,9 @@ export function ProductSearchBox({
                     >
                       <span className="suggest-main">
                         <strong>{hit.name}</strong>
-                        <span className={`source-pill source-${hit.source}`}>
-                          {hit.source === 'catalog' ? 'Catalogue' : 'Perso'}
-                        </span>
                       </span>
                       <span className="meta">
-                        {categoryLabel(hit.category)} · {hit.defaultUnit}
-                        {hit.nameNormalized === result.normalizedQuery ? ' · correspondance exacte' : ''}
+                        {categoryLabel(hit.category)} · unité {unitDisplayLabel(hit.defaultUnit)}
                       </span>
                     </button>
                   </li>
@@ -197,10 +189,7 @@ export function ProductSearchBox({
       </form>
 
       {!compact && result.exactMatch && query.trim() ? (
-        <p className="search-hint">
-          Match exact ({result.exactMatch.source === 'catalog' ? 'catalogue' : 'perso'}) après
-          normalisation : <code>{result.normalizedQuery}</code>
-        </p>
+        <p className="search-hint">Déjà connu : « {result.exactMatch.name} » — on le réutilise.</p>
       ) : null}
 
       {!compact && notice ? <p className="search-notice">{notice}</p> : null}

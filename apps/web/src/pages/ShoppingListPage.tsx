@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ShoppingListDetail } from '../components/ShoppingListDetail';
 import { createShoppingList, softDeleteShoppingList } from '../data/crud';
@@ -31,6 +31,26 @@ export function ShoppingListPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const selectedPlan = useMemo(
+    () => plans.find((p) => p._id === mealPlanId) ?? null,
+    [plans, mealPlanId],
+  );
+
+  const portionsHint = useMemo(() => {
+    if (!selectedPlan) return null;
+    const overrides = selectedPlan.slots
+      .map((s) => s.servingsOverride)
+      .filter((n): n is number => n != null && n > 0);
+    if (overrides.length === 0) {
+      return 'Les quantités suivront les portions de chaque recette.';
+    }
+    const unique = [...new Set(overrides)];
+    if (unique.length === 1) {
+      return `Quantités calculées pour ${unique[0]} personne${unique[0] === 1 ? '' : 's'}.`;
+    }
+    return 'Quantités adaptées aux portions indiquées sur chaque repas.';
+  }, [selectedPlan]);
+
   if (selectedId) {
     return (
       <section className="page-section">
@@ -41,7 +61,7 @@ export function ShoppingListPage() {
 
   async function onGenerate() {
     if (!mealPlanId) {
-      setError('Choisis un plan de repas');
+      setError('Choisis un planning');
       return;
     }
     setBusy(true);
@@ -78,24 +98,22 @@ export function ShoppingListPage() {
     <section className="page-section">
       <h1>Liste de courses</h1>
       <p className="lede">
-        Génère depuis un plan (quantités consolidées), ajoute des extras, coche hors-ligne.
+        Génère depuis un planning, ajuste les quantités, coche au fur et à mesure.
       </p>
 
       <div className="stack-form generate-box">
         <label>
-          Depuis un plan
-          <select
-            value={mealPlanId}
-            onChange={(e) => setMealPlanId(e.target.value)}
-          >
+          Depuis un planning
+          <select value={mealPlanId} onChange={(e) => setMealPlanId(e.target.value)}>
             <option value="">Choisir…</option>
             {plans.map((plan) => (
               <option key={plan._id} value={plan._id}>
-                {plan.title} ({plan.slots.length} créneaux)
+                {plan.title} ({plan.slots.length} repas)
               </option>
             ))}
           </select>
         </label>
+        {portionsHint ? <p className="field-help">{portionsHint}</p> : null}
         <label>
           Titre (optionnel)
           <input
@@ -114,11 +132,11 @@ export function ShoppingListPage() {
             Générer la liste
           </button>
           <button type="button" className="ghost-btn" disabled={busy} onClick={() => void onCreateEmpty()}>
-            Liste vide (extras only)
+            Liste vide
           </button>
         </div>
         {plans.length === 0 ? (
-          <p className="empty">Crée d’abord un plan avec recettes pour générer une liste.</p>
+          <p className="empty">Crée d’abord un planning avec des recettes pour générer une liste.</p>
         ) : null}
         {error ? <p className="form-error">{error}</p> : null}
       </div>
@@ -139,8 +157,8 @@ export function ShoppingListPage() {
                 >
                   <strong>{list.title}</strong>
                   <span className="meta">
-                    {list.status} · {checked}/{list.items.length} ·{' '}
-                    {list.mealPlanId ? 'depuis plan' : 'manuelle'}
+                    {list.status === 'open' ? 'Ouverte' : 'Terminée'} · {checked}/
+                    {list.items.length} · {list.mealPlanId ? 'depuis planning' : 'manuelle'}
                   </span>
                 </button>
                 <button
