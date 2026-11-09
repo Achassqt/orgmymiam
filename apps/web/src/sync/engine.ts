@@ -8,6 +8,7 @@ import type {
   SyncPushMutation,
 } from '@orgmymiam/shared';
 import { fetchCatalog, pullChanges, pushMutations } from '../api/client';
+import { refreshHouseholdCache } from '../data/household';
 import {
   db,
   ensureDeviceId,
@@ -378,6 +379,8 @@ export async function runSync(reason = 'manual'): Promise<void> {
 
       if (epochAtStart !== localDataEpoch) return;
       await setStatus('idle');
+      // Refresh foyer après sync (membres) — best-effort, pas de WebSocket
+      void refreshHouseholdCache().catch(() => undefined);
       console.debug('[sync] ok', reason);
     } catch (err) {
       if (epochAtStart !== localDataEpoch) return;

@@ -2,6 +2,9 @@ import type { ReactNode } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { useHousehold } from '../hooks/useHousehold';
+import { useNewMemberToast } from '../hooks/useNewMemberToast';
+import { OnboardingOverlay } from './OnboardingOverlay';
+import { PwaInstallBanner } from './PwaInstallBanner';
 import { SyncIndicator } from './SyncIndicator';
 
 function IconHome() {
@@ -67,6 +70,7 @@ const NAV: Array<{
 export function AppLayout() {
   const { session, logout } = useAuth();
   const { isMember, household } = useHousehold();
+  useNewMemberToast();
 
   return (
     <div className="app-shell">
@@ -100,6 +104,8 @@ export function AppLayout() {
         </div>
       </header>
 
+      <PwaInstallBanner />
+
       <main className="content">
         <Outlet />
       </main>
@@ -119,6 +125,8 @@ export function AppLayout() {
           </NavLink>
         ))}
       </nav>
+
+      <OnboardingOverlay />
     </div>
   );
 }

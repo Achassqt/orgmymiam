@@ -1,16 +1,17 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
+import { useToast } from '../components/ToastHost';
 import { absoluteJoinUrl } from '../data/household';
 import { useHousehold } from '../hooks/useHousehold';
 
 export function HouseholdPage() {
   const { session } = useAuth();
+  const showToast = useToast();
   const { household, members, joinPath, loading, error, create, join, leave, rotate, isMember } =
     useHousehold();
   const [name, setName] = useState('Notre foyer');
   const [code, setCode] = useState('');
-  const [copied, setCopied] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const isOwner = household?.ownerId === session?.user._id;
@@ -36,16 +37,23 @@ export function HouseholdPage() {
     }
   }
 
+  async function copyText(text: string, okMessage: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(okMessage);
+    } catch {
+      setLocalError('Impossible de copier');
+    }
+  }
+
+  async function onCopyCode() {
+    if (!household?.inviteCode) return;
+    await copyText(household.inviteCode, 'Code copié');
+  }
+
   async function onCopyLink() {
     if (!joinPath) return;
-    const url = absoluteJoinUrl(joinPath);
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setLocalError('Impossible de copier le lien');
-    }
+    await copyText(absoluteJoinUrl(joinPath), 'Lien copié');
   }
 
   if (isMember && household) {
@@ -68,8 +76,11 @@ export function HouseholdPage() {
             <strong className="invite-code">{household.inviteCode}</strong>
           </p>
           <div className="editor-actions wrap">
-            <button type="button" className="primary-btn" onClick={() => void onCopyLink()}>
-              {copied ? 'Lien copié' : 'Copier le lien'}
+            <button type="button" className="primary-btn" onClick={() => void onCopyCode()}>
+              Copier le code
+            </button>
+            <button type="button" className="ghost-btn" onClick={() => void onCopyLink()}>
+              Copier le lien
             </button>
             {isOwner ? (
               <button
