@@ -2,12 +2,17 @@
  * Normalise un nom de produit pour l'anti-doublons / recherche.
  * 1. trim
  * 2. lowercase
- * 3. NFD + suppression des diacritiques
- * 4. collapse espaces / tirets
- * 5. singularisation légère FR (règles itératives simples)
+ * 3. translittération des ligatures (œ→oe, æ→ae, …)
+ * 4. NFD + suppression des diacritiques
+ * 5. collapse espaces / tirets
+ * 6. singularisation légère FR (règles itératives simples)
  */
 export function normalizeProductName(input: string): string {
   let value = input.trim().toLowerCase();
+
+  // NFD ne décompose pas les ligatures typographiques : les translittérer
+  // avant le filtre ASCII, sinon « Œufs » → « ufs » et « Bœuf » → « b uf ».
+  value = transliterateLigatures(value);
 
   value = value.normalize('NFD').replace(/\p{M}/gu, '');
 
@@ -25,6 +30,25 @@ export function normalizeProductName(input: string): string {
     .join(' ');
 
   return value;
+}
+
+/** Ligatures / digraphes courants (déjà en minuscules). */
+const LIGATURE_MAP: Record<string, string> = {
+  œ: 'oe',
+  æ: 'ae',
+  ß: 'ss',
+  ø: 'o',
+  đ: 'd',
+  ł: 'l',
+  ﬁ: 'fi',
+  ﬂ: 'fl',
+  ﬀ: 'ff',
+  ﬃ: 'ffi',
+  ﬄ: 'ffl',
+};
+
+function transliterateLigatures(value: string): string {
+  return value.replace(/[œæßøđłﬁﬂﬀﬃﬄ]/g, (ch) => LIGATURE_MAP[ch] ?? ch);
 }
 
 const IRREGULAR_SINGULARS: Record<string, string> = {

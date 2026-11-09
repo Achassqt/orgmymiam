@@ -69,6 +69,11 @@ export const META_KEYS = {
   onboardingDoneBy: 'onboardingDoneBy',
   /** Bandeau PWA « Ajouter à l’écran d’accueil » dismissé (appareil). */
   pwaInstallDismissed: 'pwaInstallDismissed',
+  /**
+   * true quand catalogue + produits locaux ont été re-normalisés
+   * après correctif ligatures (œ→oe). Non user-scoped : une fois par appareil.
+   */
+  nameNormalizeLigaturesV2: 'nameNormalizeLigaturesV2',
 } as const;
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';

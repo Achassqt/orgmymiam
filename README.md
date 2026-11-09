@@ -52,7 +52,7 @@ Voir `.env.example` et `apps/api/.env.example` :
 | `API_HOST` / `API_PORT` | Bind API | `0.0.0.0` / `3001` |
 | `CORS_ORIGIN` | Origine CORS front (dev Vite) | `http://localhost:5173` |
 | `DOCKER_CORS_ORIGIN` | CORS pour Compose (nginx) | `http://localhost:8080` |
-| `CATALOG_VERSION` | Version du catalogue seed | `1` |
+| `CATALOG_VERSION` | Version du catalogue seed | `2` |
 | `WEB_PORT` | Port publié du front Docker | `8080` |
 
 Ne committez jamais de fichiers `.env` ni de secrets.
@@ -105,6 +105,9 @@ Ouvre [http://localhost:5173](http://localhost:5173). Les appels `/api/*` sont p
 | `npm run lint` | ESLint |
 | `npm run format` | Prettier |
 | `npm run seed` | Seed `catalog_products` |
+| `npm run test` | Tests shared + web + api |
+| `npm run test:shared` | Tests normalisation (ligatures œ→oe, …) |
+| `npm run renormalize-products -w @orgmymiam/api` | Re-normalise `nameNormalized` des produits user Mongo |
 
 ## API (Étape 1)
 

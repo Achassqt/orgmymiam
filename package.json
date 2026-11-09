@@ -19,7 +19,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck -w @orgmymiam/shared && npm run typecheck -w @orgmymiam/api && npm run typecheck -w @orgmymiam/web",
-    "test": "npm run test -w @orgmymiam/web && npm run test -w @orgmymiam/api",
+    "test": "npm run test -w @orgmymiam/shared && npm run test -w @orgmymiam/web && npm run test -w @orgmymiam/api",
+    "test:shared": "npm run test -w @orgmymiam/shared",
     "test:web": "npm run test -w @orgmymiam/web",
     "test:api": "npm run test -w @orgmymiam/api"
   },
