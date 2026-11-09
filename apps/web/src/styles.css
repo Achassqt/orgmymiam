@@ -121,10 +121,10 @@ a:focus-visible {
   justify-content: space-between;
   gap: 0.75rem;
   align-items: center;
-  padding: calc(0.7rem + env(safe-area-inset-top, 0px)) 1rem 0.7rem;
+  padding: calc(0.7rem + env(safe-area-inset-top, 0px)) var(--space-screen) 0.7rem;
   backdrop-filter: blur(14px);
-  background: color-mix(in srgb, var(--cream) 88%, transparent);
-  border-bottom: 2px solid rgba(var(--ink-rgb), 0.06);
+  background: color-mix(in srgb, var(--cream) 92%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
 }
 
 .brand,
@@ -137,23 +137,9 @@ a:focus-visible {
   color: var(--forest);
 }
 
-.burger-trigger {
-  width: 2.75rem;
-  height: 2.75rem;
-  min-width: 44px;
-  min-height: 44px;
-  background: rgba(var(--ink-rgb), 0.04);
-  color: var(--ink);
-}
-
-.burger-trigger:hover {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
 .burger-icon-svg {
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 1.375rem;
+  height: 1.375rem;
   display: block;
 }
 
@@ -166,30 +152,33 @@ a:focus-visible {
 
 .bottom-nav {
   position: fixed;
-  left: 0.65rem;
-  right: 0.65rem;
+  left: 1rem;
+  right: 1rem;
   bottom: 0.55rem;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.2rem;
-  padding: 0.45rem 0.4rem calc(0.45rem + env(safe-area-inset-bottom));
-  background: #fff;
-  border: 3px solid rgba(var(--ink-rgb), 0.08);
-  border-radius: 1.75rem;
-  box-shadow: var(--shadow);
+  gap: 0.25rem;
+  padding: 0.5rem 0.5rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  background: var(--forest);
+  border: 0;
+  border-radius: var(--radius-card);
+  box-shadow: 0 8px 20px rgba(31, 61, 43, 0.28);
   z-index: 20;
 }
 
 .nav-item {
   text-decoration: none;
-  color: var(--muted);
+  color: var(--sage);
   text-align: center;
-  padding: 0.45rem 0.2rem 0.35rem;
-  border-radius: 1.15rem;
-  font-size: 0.72rem;
-  font-weight: 800;
+  min-height: 44px;
+  padding: 0.4rem 0.2rem;
+  border-radius: 1rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   display: grid;
-  gap: 0.15rem;
+  align-content: center;
+  gap: 0.25rem;
   justify-items: center;
   transition:
     transform 0.18s var(--ease-bounce),
@@ -202,28 +191,35 @@ a:focus-visible {
 }
 
 .nav-icon-wrap {
-  width: 2.15rem;
-  height: 2.15rem;
-  border-radius: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0;
   display: grid;
   place-items: center;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: transparent;
+  color: inherit;
 }
 
 .nav-svg {
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1.375rem;
+  height: 1.375rem;
 }
 
 .nav-item.active {
-  color: var(--ink);
+  color: var(--cream);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--sage) 28%, transparent);
 }
 
 .nav-item.active .nav-icon-wrap {
-  background: var(--sunny);
-  color: var(--ink);
-  box-shadow: 0 4px 0 rgba(244, 180, 0, 0.45);
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+}
+
+.nav-item:focus-visible {
+  outline: 3px solid var(--sage);
+  outline-offset: 2px;
 }
 
 .page-section h1,
@@ -1623,6 +1619,28 @@ textarea {
 .icon-btn:hover {
   background: rgba(59, 130, 246, 0.12);
   color: var(--accent);
+}
+
+/* Shell burger — after .icon-btn so white circle wins over transparent defaults */
+.icon-btn.burger-trigger {
+  width: 3rem;
+  height: 3rem;
+  min-width: 44px;
+  min-height: 44px;
+  background: var(--white);
+  color: var(--forest);
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 8px rgba(31, 61, 43, 0.06);
+}
+
+.icon-btn.burger-trigger:hover {
+  background: var(--white);
+  color: var(--forest);
+  border-color: color-mix(in srgb, var(--sage) 55%, var(--line));
+}
+
+.icon-btn.burger-trigger:focus-visible {
+  outline-color: var(--sage);
 }
 
 .icon-btn:disabled {
