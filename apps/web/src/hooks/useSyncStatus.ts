@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, META_KEYS, type SyncStatus } from '../db/database';
-import { runSync, subscribeSyncStatus } from '../sync/engine';
+import { runSync, subscribeSyncNotice, subscribeSyncStatus } from '../sync/engine';
 
 export function useOnline(): boolean {
   const [online, setOnline] = useState(
@@ -25,12 +25,18 @@ export function useOnline(): boolean {
 export function useSyncStatus() {
   const online = useOnline();
   const [status, setStatus] = useState<SyncStatus>(online ? 'idle' : 'offline');
+  const [notice, setNotice] = useState<string | null>(null);
   const metaStatus = useLiveQuery(() => db.meta.get(META_KEYS.lastSyncStatus), []);
   const lastError = useLiveQuery(() => db.meta.get(META_KEYS.lastSyncError), []);
-  const outboxCount = useLiveQuery(() => db.outbox.count(), []) ?? 0;
+  const metaNotice = useLiveQuery(() => db.meta.get(META_KEYS.lastSyncNotice), []);
+  const outboxCount =
+    useLiveQuery(() => db.outbox.filter((e) => !e.deadLetter).count(), []) ?? 0;
+  const deadLetterCount =
+    useLiveQuery(() => db.outbox.filter((e) => !!e.deadLetter).count(), []) ?? 0;
   const lastSyncAt = useLiveQuery(() => db.meta.get(META_KEYS.lastSyncAt), []);
 
   useEffect(() => subscribeSyncStatus(setStatus), []);
+  useEffect(() => subscribeSyncNotice(setNotice), []);
 
   useEffect(() => {
     if (typeof metaStatus?.value === 'string') {
@@ -39,15 +45,23 @@ export function useSyncStatus() {
   }, [metaStatus?.value]);
 
   useEffect(() => {
+    setNotice((metaNotice?.value as string | null | undefined) ?? null);
+  }, [metaNotice?.value]);
+
+  useEffect(() => {
     if (!online) setStatus('offline');
   }, [online]);
 
+  const effective: SyncStatus = !online ? 'offline' : status;
+
   return {
     online,
-    status: online ? status : 'offline',
+    status: effective,
     outboxCount,
+    deadLetterCount,
     lastError: (lastError?.value as string | null | undefined) ?? null,
     lastSyncAt: (lastSyncAt?.value as string | undefined) ?? null,
+    notice,
     refresh: () => runSync('manual'),
   };
 }

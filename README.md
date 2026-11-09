@@ -4,7 +4,7 @@ PWA Offline-First de planification de repas et liste de courses.
 
 Monorepo npm workspaces :
 
-- `apps/web` — Vite + React 19 + Dexie + PWA + produits + recettes/plans + liste (Étape 5)
+- `apps/web` — Vite + React 19 + Dexie + PWA (Étapes 2–6, offline durci)
 - `apps/api` — API Fastify + MongoDB (auth JWT, catalogue, sync LWW)
 - `packages/shared` — types, `normalizeProductName`, schemas Zod
 
@@ -105,7 +105,7 @@ Ouvre [http://localhost:5173](http://localhost:5173). Les appels `/api/*` sont p
 
 Les documents sync utilisent des **UUID v4 string** comme `_id` (pas d’ObjectId Mongo).
 
-## Front (Étapes 2–5)
+## Front (Étapes 2–6)
 
 - Routing mobile + layout (bottom nav)
 - Auth UI login/register branchée API
@@ -116,6 +116,7 @@ Les documents sync utilisent des **UUID v4 string** comme `_id` (pas d’ObjectI
 - **Produits** : autocomplete sur `catalogProducts ∪ products` via `normalizeProductName` (anti-doublons accents/casse)
 - **Recettes / plans** : CRUD offline avec ingrédients (autocomplete) et slots (date + mealType + recipeId)
 - **Liste de courses** : génération consolidée depuis un plan, extras, cochage offline, regroupement par catégorie
+- **Sync durcie** : indicateur hors ligne / sync / à jour / erreur, retry outbox (backoff), LWW client (items liste), reprise online/focus
 
 ### Tester l’anti-doublons produits
 
@@ -139,6 +140,17 @@ Les documents sync utilisent des **UUID v4 string** comme `_id` (pas d’ObjectI
 3. Ajouter un extra (ex. `éponge`) via autocomplete.
 4. DevTools Offline → cocher/décocher → outbox ; online → sync.
 
+### Smoke E2E offline → online (Étape 6)
+
+1. Online : créer produit + recette + plan, générer une liste de courses.
+2. DevTools → **Offline**.
+3. Cocher/décocher plusieurs articles ; éventuellement ajouter un extra.
+4. Vérifier l’indicateur « Hors ligne · N en attente ».
+5. Repasser **Online** : « Sync en cours… » puis « À jour » ; cochages conservés ; outbox vide.
+6. Recharger la page : état inchangé (Dexie + sync).
+
+Hors MVP : partage multi-user / temps réel (Étape 7 du plan).
+
 ## Roadmap
 
-Prochaine livrable : **Étape 6** — durcissement offline.
+MVP offline-first couvert jusqu’à l’Étape 6. Suite possible : **Étape 7** — préparation partage 2 users.

@@ -24,8 +24,15 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [booting, setBooting] = useState(true);
-  const metaAuth = useLiveQuery(() => db.meta.get(META_KEYS.auth), []);
-  const session = (metaAuth?.value as AuthSession | null | undefined) ?? null;
+  // `null` = chargé sans session ; `undefined` = encore en chargement Dexie
+  const metaAuth = useLiveQuery(async () => {
+    const row = await db.meta.get(META_KEYS.auth);
+    return row ?? null;
+  }, []);
+  const session =
+    metaAuth && metaAuth.value
+      ? (metaAuth.value as AuthSession)
+      : null;
 
   useEffect(() => {
     bindOnlineSync();
