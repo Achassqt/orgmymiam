@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  addDaysIso,
   formatMinutes,
+  formatWeekSubtitle,
   homeGreeting,
   pickDishIllo,
   recipeMinutes,
@@ -27,15 +29,33 @@ describe('homeHub', () => {
 
   it('week strip is Mon–Sun with today flagged', () => {
     // 2026-11-09 is a Monday
-    const days = weekDayStrip('2026-11-09');
+    const days = weekDayStrip('2026-11-09', '2026-11-09');
     assert.equal(days.length, 7);
     assert.equal(days[0].label, 'L');
     assert.equal(days[0].date, '2026-11-09');
     assert.equal(days[0].isToday, true);
+    assert.equal(days[0].fullLabel, 'Lundi 9');
     assert.equal(days[6].label, 'D');
     assert.equal(days[6].date, '2026-11-15');
     const start = startOfWeekMonday('2026-11-12');
     assert.equal(toIsoDate(start), '2026-11-09');
+  });
+
+  it('week strip can show another week while keeping today flag', () => {
+    const days = weekDayStrip('2026-11-16', '2026-11-09');
+    assert.equal(days[0].date, '2026-11-16');
+    assert.equal(days[0].isToday, false);
+    assert.equal(formatWeekSubtitle('2026-11-09'), 'Semaine du 9 au 15 novembre');
+    assert.equal(addDaysIso('2026-11-09', 7), '2026-11-16');
+    assert.equal(addDaysIso('2026-11-09', -7), '2026-11-02');
+  });
+
+  it('formatWeekSubtitle crosses months', () => {
+    // 2026-11-30 is Monday
+    assert.equal(
+      formatWeekSubtitle('2026-11-30'),
+      'Semaine du 30 novembre au 6 décembre',
+    );
   });
 
   it('pickDishIllo maps keywords and badges', () => {

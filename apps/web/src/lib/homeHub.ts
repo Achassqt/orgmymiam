@@ -4,13 +4,28 @@ import { todayIsoDate, toIsoDate } from './planDates';
 export const HOME_DISH_KEYS = ['carbonara', 'fondant', 'poulet', 'salade', 'soupe'] as const;
 export type HomeDishKey = (typeof HOME_DISH_KEYS)[number];
 
+/** Créneaux affichés sur les cartes jour Planning (maquette). */
+export const PLANNING_MEAL_TYPES = ['dejeuner', 'diner'] as const;
+export type PlanningMealType = (typeof PLANNING_MEAL_TYPES)[number];
+
 const DAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'] as const;
+const DAY_FULL = [
+  'Lundi',
+  'Mardi',
+  'Mercredi',
+  'Jeudi',
+  'Vendredi',
+  'Samedi',
+  'Dimanche',
+] as const;
 
 export type WeekDayChip = {
   label: (typeof DAY_LABELS)[number];
   date: string;
   dayNum: number;
   isToday: boolean;
+  /** « Lundi 9 » — cartes jour Planning. */
+  fullLabel: string;
 };
 
 /** Semaine calendaire FR (lundi → dimanche). */
@@ -21,8 +36,23 @@ export function startOfWeekMonday(iso = todayIsoDate()): Date {
   return d;
 }
 
-export function weekDayStrip(today = todayIsoDate()): WeekDayChip[] {
-  const start = startOfWeekMonday(today);
+/** Décale une date ISO de N jours (midi local, stable DST). */
+export function addDaysIso(iso: string, days: number): string {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  return toIsoDate(d);
+}
+
+/**
+ * Strip L–D pour une semaine.
+ * @param anchor jour quelconque de la semaine affichée
+ * @param today référence « Aujourd’hui » (défaut : aujourd’hui)
+ */
+export function weekDayStrip(
+  anchor = todayIsoDate(),
+  today = todayIsoDate(),
+): WeekDayChip[] {
+  const start = startOfWeekMonday(anchor);
   return DAY_LABELS.map((label, i) => {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
@@ -32,8 +62,27 @@ export function weekDayStrip(today = todayIsoDate()): WeekDayChip[] {
       date,
       dayNum: d.getDate(),
       isToday: date === today,
+      fullLabel: `${DAY_FULL[i]} ${d.getDate()}`,
     };
   });
+}
+
+/** « Semaine du 9 au 15 novembre » / croisement de mois. */
+export function formatWeekSubtitle(anchorIso: string): string {
+  const start = startOfWeekMonday(anchorIso);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const startDay = start.getDate();
+  const endDay = end.getDate();
+  const startMonth = start.toLocaleDateString('fr-FR', { month: 'long' });
+  const endMonth = end.toLocaleDateString('fr-FR', { month: 'long' });
+  if (
+    start.getMonth() === end.getMonth() &&
+    start.getFullYear() === end.getFullYear()
+  ) {
+    return `Semaine du ${startDay} au ${endDay} ${endMonth}`;
+  }
+  return `Semaine du ${startDay} ${startMonth} au ${endDay} ${endMonth}`;
 }
 
 /** Bonjour / Bonsoir selon l’heure locale + prénom (1er mot du displayName). */
