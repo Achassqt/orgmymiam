@@ -60,7 +60,7 @@ export function RecipesPage() {
           {recipes.length > 0 ? (
             <button
               type="button"
-              className="primary-btn bounce-press"
+              className="primary-btn"
               onClick={() => setMode('create')}
             >
               Nouvelle
@@ -76,7 +76,7 @@ export function RecipesPage() {
             action={
               <button
                 type="button"
-                className="primary-btn bounce-press"
+                className="primary-btn"
                 onClick={() => setMode('create')}
               >
                 Créer une recette

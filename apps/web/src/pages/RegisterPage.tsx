@@ -82,7 +82,7 @@ export function RegisterPage() {
             />
           </label>
           {error ? <p className="form-error">{error}</p> : null}
-          <button type="submit" className="primary-btn bounce-press" disabled={submitting}>
+          <button type="submit" className="primary-btn" disabled={submitting}>
             {submitting ? 'Création…' : 'S’inscrire'}
           </button>
         </form>

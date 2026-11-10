@@ -239,13 +239,13 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
 
   return (
     <div className="editor-panel recipe-editor soft-card">
-      <div className="editor-header">
+      <div className="editor-header editor-header-stack">
+        <button type="button" className="back-link" onClick={onCancel}>
+          ← Retour
+        </button>
         <h2 className="screen-title editor-title">
           {recipe ? 'Modifier la recette' : 'Nouvelle recette'}
         </h2>
-        <button type="button" className="ghost-btn" onClick={onCancel}>
-          Fermer
-        </button>
       </div>
 
       <div className="stack-form">
@@ -325,8 +325,8 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
               <button
                 type="button"
                 className="icon-btn soft"
-                aria-label={`Retirer ${ing.name}`}
-                title="Retirer"
+                aria-label={`Supprimer ${ing.name}`}
+                title="Supprimer"
                 onClick={() => setIngredients((prev) => prev.filter((row) => row.key !== ing.key))}
               >
                 <TrashIcon />

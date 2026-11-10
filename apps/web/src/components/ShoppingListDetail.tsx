@@ -98,8 +98,8 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     return (
       <div>
         <p className="empty">Liste introuvable.</p>
-        <button type="button" className="ghost-btn" onClick={onBack}>
-          Retour
+        <button type="button" className="back-link" onClick={onBack}>
+          ← Retour
         </button>
       </div>
     );
@@ -501,7 +501,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                         </button>
                         <button
                           type="button"
-                          className="primary-btn bounce-press"
+                          className="primary-btn"
                           disabled={busy}
                           onClick={() => void saveExpand(item.id)}
                         >
@@ -510,8 +510,8 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                         <button
                           type="button"
                           className="icon-btn soft"
-                          aria-label={`Retirer ${item.nameSnapshot}`}
-                          title="Retirer"
+                          aria-label={`Supprimer ${item.nameSnapshot}`}
+                          title="Supprimer"
                           disabled={busy}
                           onClick={() => {
                             setExpandedId(null);

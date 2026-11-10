@@ -75,14 +75,16 @@ export function ProductsPage() {
 
   return (
     <section className="page-section page-enter screen-produits">
+      <p className="page-back-row">
+        <Link className="back-link" to="/recettes">
+          ← Retour
+        </Link>
+      </p>
       <div className="page-heading">
         <div>
           <h1 className="screen-title">Produits</h1>
           <p className="lede">Catalogue perso — aussi accessible depuis les recettes.</p>
         </div>
-        <Link className="ghost-btn" to="/recettes">
-          ← Recettes
-        </Link>
       </div>
 
       <div className="product-create-unit soft-card product-tools">
@@ -112,7 +114,7 @@ export function ProductsPage() {
             title="Aucun produit encore"
             description="Cherche ci-dessus, ou ajoute des ingrédients depuis une recette."
             action={
-              <Link className="primary-btn bounce-press" to="/recettes">
+              <Link className="primary-btn" to="/recettes">
                 Aller aux recettes
               </Link>
             }

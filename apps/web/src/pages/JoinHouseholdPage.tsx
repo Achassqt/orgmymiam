@@ -91,7 +91,7 @@ export function JoinHouseholdPage() {
           </label>
           <button
             type="submit"
-            className="primary-btn bounce-press"
+            className="primary-btn"
             disabled={loading || code.trim().length !== 6}
           >
             Rejoindre

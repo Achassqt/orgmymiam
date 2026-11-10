@@ -106,6 +106,8 @@ export function AppLayout() {
   const { session } = useAuth();
   const isHome = location.pathname === '/';
   const isPlanning = location.pathname === '/plans';
+  /* Autres routes : chrome transparent sans brand (comme Planning). */
+  const isPlainChrome = !isHome;
   const greeting = homeGreeting(session?.user.displayName);
   useNewMemberToast();
 
@@ -113,20 +115,26 @@ export function AppLayout() {
     ? 'topbar topbar-home'
     : isPlanning
       ? 'topbar topbar-planning'
-      : 'topbar';
+      : 'topbar topbar-plain';
 
   return (
-    <div className={isPlanning ? 'app-shell app-shell-planning' : 'app-shell'}>
+    <div
+      className={
+        isPlanning
+          ? 'app-shell app-shell-planning'
+          : isPlainChrome
+            ? 'app-shell app-shell-plain'
+            : 'app-shell'
+      }
+    >
       <header className={topbarClass}>
         {isHome ? (
           <div className="home-greeting">
             <h1 className="home-greeting-title">{greeting.title}</h1>
             <p className="home-greeting-sub">{greeting.subtitle}</p>
           </div>
-        ) : isPlanning ? (
-          <div className="topbar-planning-grow" aria-hidden />
         ) : (
-          <p className="brand">OrgMyMiam</p>
+          <div className="topbar-plain-grow" aria-hidden />
         )}
         <button
           ref={burgerRef}

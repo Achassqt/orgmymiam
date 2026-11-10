@@ -119,7 +119,7 @@ export function ShoppingListPage() {
             title="Pas encore de liste"
             description="Crée d’abord un planning avec des recettes, puis reviens générer tes courses."
             action={
-              <Link className="primary-btn bounce-press" to="/plans">
+              <Link className="primary-btn" to="/plans">
                 Aller au planning
               </Link>
             }
@@ -161,7 +161,7 @@ export function ShoppingListPage() {
             <div className="editor-actions wrap">
               <button
                 type="button"
-                className="primary-btn bounce-press"
+                className="primary-btn"
                 disabled={busy || !rangeFrom || !rangeTo}
                 onClick={() => void onGenerate()}
               >

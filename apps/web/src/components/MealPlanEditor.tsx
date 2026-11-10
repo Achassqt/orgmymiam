@@ -164,11 +164,11 @@ export function MealPlanEditor({
 
   return (
     <div className="editor-panel planning-editor">
-      <div className="editor-header">
-        <h2>{isEdit ? 'Modifier le repas' : 'Ajouter un repas'}</h2>
-        <button type="button" className="ghost-btn" onClick={onCancel}>
-          Fermer
+      <div className="editor-header editor-header-stack">
+        <button type="button" className="back-link" onClick={onCancel}>
+          ← Retour
         </button>
+        <h2>{isEdit ? 'Modifier le repas' : 'Ajouter un repas'}</h2>
       </div>
 
       <p className="planning-editor-context" aria-live="polite">
