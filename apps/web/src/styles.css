@@ -206,9 +206,9 @@ a:focus-visible {
 }
 
 .nav-item.active {
-  color: var(--cream);
+  color: var(--forest);
   font-weight: 600;
-  background: color-mix(in srgb, var(--sage) 28%, transparent);
+  background: var(--sage);
 }
 
 .nav-item.active .nav-icon-wrap {
@@ -445,6 +445,8 @@ select {
   align-items: center;
   gap: 0.4rem;
   padding: 0.4rem 0.75rem;
+  min-height: 44px;
+  box-sizing: border-box;
   font-size: 0.72rem;
   font-weight: 800;
   max-width: min(18rem, 72vw);
@@ -455,6 +457,7 @@ select {
   max-width: none;
   justify-content: flex-start;
   padding: 0.7rem 0.85rem;
+  min-height: 44px;
   font-size: 0.82rem;
   border-radius: 1rem;
 }
@@ -593,6 +596,20 @@ select {
   margin: 1rem 0 0;
   color: var(--muted);
   font-weight: 600;
+  min-height: 44px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  box-sizing: border-box;
+}
+
+.auth-switch a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.15rem 0;
+  box-sizing: border-box;
 }
 
 .form-error,
@@ -1140,6 +1157,43 @@ textarea {
   padding-bottom: 0.35rem;
 }
 
+/* Planning: pas de brand « OrgMyMiam » — burger sur la ligne du titre (comme Accueil) */
+.app-shell-planning {
+  position: relative;
+}
+
+.topbar.topbar-planning {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: transparent;
+  border-bottom: 0;
+  backdrop-filter: none;
+  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
+  padding-bottom: 0.35rem;
+  /* hors flux : pas de ligne brand au-dessus du titre Planning */
+  height: auto;
+  pointer-events: none;
+}
+
+.topbar.topbar-planning .burger-trigger {
+  pointer-events: auto;
+}
+
+.topbar-planning-grow {
+  display: none;
+}
+
+.app-shell-planning > .content {
+  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
+}
+
 .home-greeting {
   min-width: 0;
   flex: 1;
@@ -1522,9 +1576,13 @@ textarea {
 
 .planning-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+  /* laisse la place au burger (48px) à droite du titre, comme Accueil */
+  padding-right: 3.75rem;
+  min-height: 48px;
+  box-sizing: border-box;
 }
 
 .planning-titles {
