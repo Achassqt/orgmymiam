@@ -1579,6 +1579,9 @@ textarea {
 }
 
 .home-week-empty a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-weight: 600;
 }
 
@@ -2121,6 +2124,13 @@ textarea {
   text-align: center;
 }
 
+.page-foot-link a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+}
+
 /* —— Foyer / partage —— */
 .foyer-link {
   color: var(--accent);
@@ -2137,6 +2147,10 @@ textarea {
 }
 
 .home-foyer-cta a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   color: var(--accent);
   font-weight: 600;
 }

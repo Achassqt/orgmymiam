@@ -2,12 +2,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { MealPlan, MealType } from '@orgmymiam/shared';
 import { useAuth } from '../auth/AuthProvider';
-import { buildMealSlot, createMealPlan, updateMealPlan } from '../data/crud';
+import {
+  buildMealSlot,
+  createMealPlan,
+  softDeleteMealPlan,
+  updateMealPlan,
+} from '../data/crud';
 import { MEAL_TYPE_LABELS } from '../data/productSearch';
 import { db } from '../db/database';
 import { PLANNING_MEAL_TYPES } from '../lib/homeHub';
 import { formatPlanDate, todayIsoDate } from '../lib/planDates';
-import { replaceMealSlotForDayType } from '../lib/mealSlots';
+import { removeMealSlot, replaceMealSlotForDayType } from '../lib/mealSlots';
+import { TrashIcon } from './icons';
 import { VisibilityToggle } from './VisibilityToggle';
 
 interface MealPlanEditorProps {
@@ -162,6 +168,27 @@ export function MealPlanEditor({
     }
   }
 
+  async function onDelete() {
+    if (!plan || !editingSlotId) return;
+    if (!window.confirm('Supprimer ce repas du planning ?')) return;
+
+    setBusy(true);
+    setError(null);
+    try {
+      const nextSlots = removeMealSlot(plan.slots, editingSlotId);
+      if (nextSlots.length === 0) {
+        await softDeleteMealPlan(plan._id);
+      } else {
+        await updateMealPlan(plan._id, { slots: nextSlots });
+      }
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Suppression impossible');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="editor-panel planning-editor">
       <div className="editor-header editor-header-stack">
@@ -239,6 +266,18 @@ export function MealPlanEditor({
       {error ? <p className="form-error">{error}</p> : null}
 
       <div className="editor-actions">
+        {isEdit ? (
+          <button
+            type="button"
+            className="icon-btn soft"
+            aria-label="Supprimer ce repas"
+            title="Supprimer"
+            disabled={busy}
+            onClick={() => void onDelete()}
+          >
+            <TrashIcon />
+          </button>
+        ) : null}
         <button
           type="button"
           className="primary-btn"

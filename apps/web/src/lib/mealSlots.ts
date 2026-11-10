@@ -85,3 +85,8 @@ export function replaceMealSlotForDayType(
     },
   ];
 }
+
+/** Retire un créneau du planning (créneau redevient vide). */
+export function removeMealSlot(slots: MealSlot[], slotId: string): MealSlot[] {
+  return slots.filter((s) => s.id !== slotId);
+}

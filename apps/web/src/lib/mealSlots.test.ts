@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { MealSlot } from '@orgmymiam/shared';
-import { mealSlotKey, replaceMealSlotForDayType, upsertMealSlot } from './mealSlots.js';
+import {
+  mealSlotKey,
+  removeMealSlot,
+  replaceMealSlotForDayType,
+  upsertMealSlot,
+} from './mealSlots.js';
 
 function slot(
   partial: Partial<MealSlot> & Pick<MealSlot, 'id' | 'date' | 'mealType' | 'recipeId'>,
@@ -119,5 +124,20 @@ describe('replaceMealSlotForDayType', () => {
     });
     assert.equal(next.length, 2);
     assert.equal(next[1]?.mealType, 'petit_dejeuner');
+  });
+});
+
+describe('removeMealSlot', () => {
+  it('retire le créneau ciblé et laisse les autres', () => {
+    const a = slot({ id: 'a', date: '2026-11-09', mealType: 'dejeuner', recipeId: 'r1' });
+    const b = slot({ id: 'b', date: '2026-11-09', mealType: 'diner', recipeId: 'r2' });
+    const next = removeMealSlot([a, b], 'a');
+    assert.equal(next.length, 1);
+    assert.equal(next[0]?.id, 'b');
+  });
+
+  it('renvoie une liste vide si dernier créneau', () => {
+    const a = slot({ id: 'a', date: '2026-11-09', mealType: 'diner', recipeId: 'r1' });
+    assert.deepEqual(removeMealSlot([a], 'a'), []);
   });
 });

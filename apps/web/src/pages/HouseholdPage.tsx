@@ -131,6 +131,11 @@ export function HouseholdPage() {
 
   return (
     <section className="page-section page-enter screen-foyer">
+      <p className="page-back-row">
+        <Link to="/" className="back-link">
+          ← Retour
+        </Link>
+      </p>
       <div className="page-heading">
         <div>
           <h1 className="screen-title">Foyer</h1>
