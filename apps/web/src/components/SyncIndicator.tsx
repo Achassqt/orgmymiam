@@ -23,32 +23,32 @@ export function SyncIndicator({ compact = false }: SyncIndicatorProps) {
 
   let label = 'Enregistré';
   let tone: 'ok' | 'warn' | 'bad' | 'muted' = 'ok';
-  let title = 'Tout est enregistré — cliquer pour vérifier';
+  let title = 'Tout est enregistré. Cliquer pour vérifier';
 
   if (!online || status === 'offline') {
     label =
-      outboxCount > 0 ? 'Hors ligne — sera sauvegardé plus tard' : 'Hors ligne';
+      outboxCount > 0 ? 'Hors ligne, sera sauvegardé plus tard' : 'Hors ligne';
     tone = 'warn';
     title =
       outboxCount > 0
-        ? 'Pas de réseau — tes changements seront enregistrés au retour'
+        ? 'Pas de réseau : tes changements seront enregistrés au retour'
         : 'Pas de réseau';
   } else if (status === 'syncing') {
     label = 'Sauvegarde…';
     tone = 'muted';
     title = 'Enregistrement en cours…';
   } else if (status === 'error') {
-    label = 'Erreur — réessayer';
+    label = 'Erreur, réessayer';
     tone = 'bad';
-    title = lastError ?? 'Erreur d’enregistrement — cliquer pour réessayer';
+    title = lastError ?? 'Erreur d’enregistrement. Cliquer pour réessayer';
   } else if (deadLetterCount > 0) {
-    label = 'Erreur — réessayer';
+    label = 'Erreur, réessayer';
     tone = 'bad';
-    title = 'Certains changements n’ont pas pu être enregistrés — cliquer pour réessayer';
+    title = 'Certains changements n’ont pas pu être enregistrés. Cliquer pour réessayer';
   } else if (outboxCount > 0) {
     label = 'Sauvegarde…';
     tone = 'warn';
-    title = 'Enregistrement en attente — cliquer pour pousser maintenant';
+    title = 'Enregistrement en attente. Cliquer pour pousser maintenant';
   }
 
   return (

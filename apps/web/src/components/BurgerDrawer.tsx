@@ -148,7 +148,7 @@ export function BurgerDrawer({ open, onClose, triggerRef }: BurgerDrawerProps) {
 
           <div className="burger-hint burger-about">
             <strong>À propos</strong>
-            <span className="meta">OrgMyMiam — recettes, planning & courses, même hors ligne.</span>
+            <span className="meta">OrgMyMiam : recettes, planning & courses, même hors ligne.</span>
           </div>
         </nav>
 

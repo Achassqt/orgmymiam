@@ -40,10 +40,9 @@ export function LoginPage() {
             <DishIlloFrame dish="carbonara" size="lg" />
           </div>
           <p className="brand">OrgMyMiam</p>
-          <p className="auth-tagline">À table — organisez vos repas !</p>
+          <p className="auth-tagline">Organisez vos repas !</p>
         </div>
         <h1>Connexion</h1>
-        <p className="lede">Retrouve tes plans et listes sur tous tes appareils.</p>
         <form onSubmit={(e) => void onSubmit(e)} className="stack-form">
           <label>
             Email

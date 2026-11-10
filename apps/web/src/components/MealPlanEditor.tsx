@@ -228,7 +228,7 @@ export function MealPlanEditor({
             {recipes.length === 0 ? <option value="">Aucune recette</option> : null}
             {recipes.map((recipe) => (
               <option key={recipe._id} value={recipe._id}>
-                {recipe.title} — pour {personsLabel(recipe.servings)}
+                {recipe.title} · pour {personsLabel(recipe.servings)}
               </option>
             ))}
           </select>

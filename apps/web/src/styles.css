@@ -1,5 +1,5 @@
 :root {
-  /* —— Refonte forêt / sauge / crème / terracotta —— */
+  /* -- Refonte forêt / sauge / crème / terracotta -- */
   --forest: #1f3d2b;
   --sage: #a9bfa0;
   --cream: #f6f1e7;
@@ -426,7 +426,7 @@ select {
   box-sizing: border-box;
 }
 
-/* bounce-press retiré (OMM-42) — plus d’animation hover sur les boutons */
+/* bounce-press retiré (OMM-42) - plus d’animation hover sur les boutons */
 
 .sync-wrap {
   position: relative;
@@ -1190,7 +1190,7 @@ textarea {
   z-index: 0;
 }
 
-/* —— Cartoon hub / empty / motion —— */
+/* -- Cartoon hub / empty / motion -- */
 
 .page-enter {
   animation: page-enter 0.35s var(--ease-out);
@@ -1237,7 +1237,7 @@ textarea {
     linear-gradient(145deg, var(--sage-tint) 0%, var(--cream) 45%, var(--terra-tint) 100%);
 }
 
-/* —— Accueil fidèle maquette (OMM-32) —— */
+/* -- Accueil fidèle maquette (OMM-32) -- */
 
 .home-greeting {
   min-width: 0;
@@ -1617,7 +1617,7 @@ textarea {
   text-align: center;
 }
 
-/* —— Planning (fidèle maquette) —— */
+/* -- Planning (fidèle maquette) -- */
 .planning-page {
   display: grid;
   gap: 0.75rem;
@@ -2082,7 +2082,7 @@ textarea {
   min-height: 44px;
 }
 
-/* —— Foyer / partage —— */
+/* -- Foyer / partage -- */
 .foyer-link {
   color: var(--accent);
   text-decoration: none;
@@ -2224,7 +2224,7 @@ textarea {
   color: #a33 !important;
 }
 
-/* —— Pull-to-refresh —— */
+/* -- Pull-to-refresh -- */
 .ptr-root {
   min-height: 100%;
   overflow-y: auto;
@@ -2268,7 +2268,7 @@ textarea {
   font-weight: 600;
 }
 
-/* —— Toasts (copier / nouveau membre) —— */
+/* -- Toasts (copier / nouveau membre) -- */
 
 .toast-stack {
   position: fixed;
@@ -2306,7 +2306,7 @@ textarea {
   }
 }
 
-/* —— Onboarding cartoon —— */
+/* -- Onboarding cartoon -- */
 
 .onboarding-backdrop {
   position: fixed;
@@ -2386,7 +2386,7 @@ textarea {
   text-align: center;
 }
 
-/* —— PWA install banner —— */
+/* -- PWA install banner -- */
 
 .pwa-banner {
   display: flex;
@@ -2424,7 +2424,7 @@ textarea {
   font-size: 0.85rem;
 }
 
-/* —— Courses : qui a coché —— */
+/* -- Courses : qui a coché -- */
 
 .checked-by-chip {
   display: inline-flex;
@@ -2443,7 +2443,7 @@ textarea {
   width: fit-content;
 }
 
-/* —— Actions UI polish (menus, filtres, icônes soft) —— */
+/* -- Actions UI polish (menus, filtres, icônes soft) -- */
 
 .back-link {
   border: 0;
@@ -2494,7 +2494,7 @@ textarea {
   color: var(--forest);
 }
 
-/* Shell burger — after .icon-btn so white circle wins over transparent defaults */
+/* Shell burger - after .icon-btn so white circle wins over transparent defaults */
 .icon-btn.burger-trigger {
   width: 3rem;
   height: 3rem;
@@ -2672,7 +2672,7 @@ textarea {
   align-self: center;
 }
 
-/* —— Impression liste de courses (Partager / Imprimer via menu ⋯) —— */
+/* -- Impression liste de courses (Partager / Imprimer via menu ⋯) -- */
 
 .print-sheet {
   display: none;
@@ -2850,7 +2850,7 @@ textarea {
   }
 }
 
-/* —— Burger drawer / menu —— */
+/* -- Burger drawer / menu -- */
 
 .burger-root {
   position: fixed;
@@ -3036,7 +3036,7 @@ textarea {
   transform: translateY(1px);
 }
 
-/* —— OMM-34 Autres écrans (recettes, courses, foyer, produits…) —— */
+/* -- OMM-34 Autres écrans (recettes, courses, foyer, produits…) -- */
 
 .recipe-card-list .recipe-card {
   padding: 0.65rem 0.7rem 0.65rem 0.65rem;
@@ -3190,7 +3190,7 @@ textarea {
   font-size: 1.05rem;
 }
 
-/* —— Dish illustrations (refonte plats) —— */
+/* -- Dish illustrations (refonte plats) -- */
 
 .dish-illo-frame {
   --dish-pastel: var(--sage-tint);

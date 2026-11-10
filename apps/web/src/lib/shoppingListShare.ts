@@ -4,9 +4,9 @@ import { formatQuantity } from './units';
 
 export function shoppingListTitleFromRange(rangeFrom: string, rangeTo: string): string {
   if (rangeFrom === rangeTo) {
-    return `Courses — ${formatPlanDate(rangeFrom)}`;
+    return `Courses · ${formatPlanDate(rangeFrom)}`;
   }
-  return `Courses — ${formatPlanDate(rangeFrom)} → ${formatPlanDate(rangeTo)}`;
+  return `Courses · ${formatPlanDate(rangeFrom)} → ${formatPlanDate(rangeTo)}`;
 }
 
 /** Texte checklist plat (sans catégories) pour partage / presse-papiers. */
@@ -23,8 +23,8 @@ export function formatShoppingListShareText(
 
   for (const item of items) {
     const box = item.checked ? '[x]' : '[ ]';
-    const note = item.note?.trim() ? ` — ${item.note.trim()}` : '';
-    lines.push(`${box} ${item.nameSnapshot} — ${formatQuantity(item.quantity, item.unit)}${note}`);
+    const note = item.note?.trim() ? ` · ${item.note.trim()}` : '';
+    lines.push(`${box} ${item.nameSnapshot} · ${formatQuantity(item.quantity, item.unit)}${note}`);
   }
 
   return lines.join('\n').trimEnd();

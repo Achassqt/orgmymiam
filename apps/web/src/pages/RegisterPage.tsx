@@ -48,7 +48,6 @@ export function RegisterPage() {
           <p className="auth-tagline">Ton assistant repas du quotidien.</p>
         </div>
         <h1>Créer un compte</h1>
-        <p className="lede">Un compte pour retrouver tes recettes et listes.</p>
         <form onSubmit={(e) => void onSubmit(e)} className="stack-form">
           <label>
             Prénom / pseudo

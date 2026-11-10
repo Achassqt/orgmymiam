@@ -22,7 +22,7 @@ export interface OutboxEntry {
   createdAt: string;
   attempts: number;
   lastError?: string;
-  /** ISO — ne pas retenter avant cette date */
+  /** ISO - ne pas retenter avant cette date */
   nextRetryAt?: string;
   /** Trop d’échecs : exclu du flush automatique */
   deadLetter?: boolean;
@@ -53,7 +53,7 @@ export interface MetaRecord {
 export const META_KEYS = {
   deviceId: 'deviceId',
   auth: 'auth',
-  /** Dernier userId connu — survit à un auth null (token expiré) pour éviter une purge mono-compte. */
+  /** Dernier userId connu - survit à un auth null (token expiré) pour éviter une purge mono-compte. */
   lastUserId: 'lastUserId',
   /** Cache foyer courant (HouseholdResponse | null). */
   household: 'household',

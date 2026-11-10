@@ -380,8 +380,8 @@ export async function runSync(reason = 'manual'): Promise<void> {
       } else if (deadLetters > 0) {
         await setNotice(
           deadLetters === 1
-            ? 'Un changement n’a pas pu être enregistré — réessayer.'
-            : `${deadLetters} changements n’ont pas pu être enregistrés — réessayer.`,
+            ? 'Un changement n’a pas pu être enregistré, réessayer.'
+            : `${deadLetters} changements n’ont pas pu être enregistrés, réessayer.`,
         );
       } else if (remaining === 0) {
         await setNotice(null);
@@ -389,7 +389,7 @@ export async function runSync(reason = 'manual'): Promise<void> {
 
       if (epochAtStart !== localDataEpoch) return;
       await setStatus('idle');
-      // Refresh foyer après sync (membres) — best-effort, pas de WebSocket
+      // Refresh foyer après sync (membres) - best-effort, pas de WebSocket
       void refreshHouseholdCache().catch(() => undefined);
       console.debug('[sync] ok', reason);
     } catch (err) {

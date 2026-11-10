@@ -1,6 +1,6 @@
 import { todayIsoDate, toIsoDate } from './planDates';
 
-/** Keys aligned with DishIllos — kept here to avoid SVG imports in unit tests. */
+/** Keys aligned with DishIllos - kept here to avoid SVG imports in unit tests. */
 export const HOME_DISH_KEYS = ['carbonara', 'fondant', 'poulet', 'salade', 'soupe'] as const;
 export type HomeDishKey = (typeof HOME_DISH_KEYS)[number];
 
@@ -29,7 +29,7 @@ export type WeekDayChip = {
   date: string;
   dayNum: number;
   isToday: boolean;
-  /** « Lundi 9 » — cartes jour Planning. */
+  /** « Lundi 9 » - cartes jour Planning. */
   fullLabel: string;
 };
 

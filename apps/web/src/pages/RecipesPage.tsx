@@ -72,7 +72,7 @@ export function RecipesPage() {
           <EmptyState
             illo="chef"
             title="Ta première recette ?"
-            description="Ajoute un plat, ses portions et ses ingrédients — ensuite place-le au planning."
+            description="Ajoute un plat, ses portions et ses ingrédients, ensuite place-le au planning."
             action={
               <button
                 type="button"

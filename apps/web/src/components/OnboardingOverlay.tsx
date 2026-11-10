@@ -9,7 +9,7 @@ type DoneMap = Record<string, true>;
 const STEPS = [
   {
     title: 'Crée une recette',
-    body: 'Ajoute tes plats du quotidien — on s’occupe des quantités.',
+    body: 'Ajoute tes plats du quotidien, on s’occupe des quantités.',
     cta: 'Voir les recettes',
     to: '/recettes',
     dish: 'poulet' as const,

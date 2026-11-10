@@ -64,7 +64,7 @@ export async function migrateNameNormalizedLigatures(): Promise<{
       createdAt: nowIso(),
       attempts: 0,
     };
-    // syncNow: false — le caller (boot / auth) déclenche runSync ensuite
+    // syncNow: false - le caller (boot / auth) déclenche runSync ensuite
     await enqueueOutbox(entry, { syncNow: false });
   }
 

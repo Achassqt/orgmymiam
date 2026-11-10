@@ -83,7 +83,7 @@ export function ProductsPage() {
       <div className="page-heading">
         <div>
           <h1 className="screen-title">Produits</h1>
-          <p className="lede">Catalogue perso — aussi accessible depuis les recettes.</p>
+          <p className="lede">Catalogue perso, aussi accessible depuis les recettes.</p>
         </div>
       </div>
 

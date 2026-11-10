@@ -26,7 +26,7 @@ function item(partial: Partial<ShoppingListItem> & Pick<ShoppingListItem, 'nameS
 describe('formatShoppingListShareText', () => {
   it('renders a flat checklist without categories', () => {
     const text = formatShoppingListShareText(
-      'Courses — Aujourd’hui',
+      'Courses · Aujourd’hui',
       [
         item({ nameSnapshot: 'Pain', quantity: 1, unit: 'pièce', category: 'boulangerie' }),
         item({
@@ -41,7 +41,7 @@ describe('formatShoppingListShareText', () => {
       'Week-end',
     );
 
-    assert.match(text, /^Courses — Aujourd’hui/);
+    assert.match(text, /^Courses · Aujourd’hui/);
     assert.match(text, /Week-end/);
     assert.match(text, /\[ \] Pain/);
     assert.match(text, /\[x\] Lait/);
@@ -54,7 +54,7 @@ describe('shoppingListTitleFromRange', () => {
   it('builds a title for a single day and a range', () => {
     const one = shoppingListTitleFromRange('2099-01-05', '2099-01-05');
     const range = shoppingListTitleFromRange('2099-01-05', '2099-01-19');
-    assert.match(one, /^Courses — /);
+    assert.match(one, /^Courses · /);
     assert.match(range, /→/);
   });
 });
