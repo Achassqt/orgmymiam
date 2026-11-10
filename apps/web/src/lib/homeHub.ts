@@ -90,10 +90,71 @@ export function formatWeekSubtitle(anchorIso: string): string {
   return `Semaine du ${startDay} ${startMonth} au ${endDay} ${endMonth}`;
 }
 
+export type UpcomingMealLike = {
+  date: string;
+  mealType: string;
+};
+
+/** Moment de repas pour la phrase Accueil (« ce matin », « demain midi », …). */
+export function mealMomentPhrase(
+  meal: UpcomingMealLike | null | undefined,
+  today = todayIsoDate(),
+  now = new Date(),
+): string {
+  const slotPhrase = (mealType: string): string => {
+    if (mealType === 'petit_dejeuner') return 'matin';
+    if (mealType === 'dejeuner') return 'midi';
+    if (mealType === 'collation') return 'après-midi';
+    if (mealType === 'diner') return 'soir';
+    return 'prochain repas';
+  };
+
+  if (!meal) {
+    const hour = now.getHours();
+    if (hour < 11) return 'ce matin';
+    if (hour < 15) return 'ce midi';
+    if (hour < 18) return 'cet après-midi';
+    return 'ce soir';
+  }
+
+  const slot = slotPhrase(meal.mealType);
+  if (slot === 'prochain repas') return slot;
+
+  if (meal.date === today) {
+    if (slot === 'matin') return 'ce matin';
+    if (slot === 'midi') return 'ce midi';
+    if (slot === 'après-midi') return 'cet après-midi';
+    return 'ce soir';
+  }
+
+  const tomorrow = addDaysIso(today, 1);
+  if (meal.date === tomorrow) {
+    if (slot === 'matin') return 'demain matin';
+    if (slot === 'midi') return 'demain midi';
+    if (slot === 'après-midi') return 'demain après-midi';
+    return 'demain soir';
+  }
+
+  const d = new Date(`${meal.date}T12:00:00`);
+  const weekday = d.toLocaleDateString('fr-FR', { weekday: 'long' });
+  return `${weekday} ${slot === 'après-midi' ? 'après-midi' : slot}`;
+}
+
+/** « On mange quoi ce soir ? » selon le prochain repas (ou l’heure si vide). */
+export function homeMealQuestion(
+  meal?: UpcomingMealLike | null,
+  today = todayIsoDate(),
+  now = new Date(),
+): string {
+  return `On mange quoi ${mealMomentPhrase(meal, today, now)} ?`;
+}
+
 /** Bonjour / Bonsoir selon l’heure locale + prénom (1er mot du displayName). */
 export function homeGreeting(
   displayName: string | undefined,
   now = new Date(),
+  nextMeal?: UpcomingMealLike | null,
+  today = todayIsoDate(),
 ): { hello: string; firstName: string; title: string; subtitle: string } {
   const firstName = (displayName ?? '').trim().split(/\s+/)[0] || 'toi';
   const hour = now.getHours();
@@ -102,7 +163,7 @@ export function homeGreeting(
     hello,
     firstName,
     title: `${hello} ${firstName}`,
-    subtitle: "Qu'est-ce qu'on mange ce soir ?",
+    subtitle: homeMealQuestion(nextMeal, today, now),
   };
 }
 
@@ -169,11 +230,6 @@ export function mealTypeOrder(mealType: string): number {
   const idx = (MEAL_TYPE_ORDER as readonly string[]).indexOf(mealType);
   return idx >= 0 ? idx : 99;
 }
-
-export type UpcomingMealLike = {
-  date: string;
-  mealType: string;
-};
 
 /**
  * Prochain repas selon l’heure actuelle : ignore les créneaux déjà passés

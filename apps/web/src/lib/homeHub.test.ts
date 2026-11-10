@@ -22,12 +22,29 @@ describe('homeHub', () => {
     assert.equal(g.hello, 'Bonsoir');
     assert.equal(g.firstName, 'Sacha');
     assert.equal(g.title, 'Bonsoir Sacha');
-    assert.match(g.subtitle, /ce soir/);
+    assert.match(g.subtitle, /On mange quoi ce soir/);
   });
 
   it('greeting uses Bonjour daytime', () => {
     const g = homeGreeting('Alex', new Date('2026-11-09T11:00:00'));
     assert.equal(g.title, 'Bonjour Alex');
+  });
+
+  it('greeting subtitle follows next meal including demain', () => {
+    const lunch = homeGreeting(
+      'Sacha',
+      new Date('2026-11-10T09:00:00'),
+      { date: '2026-11-10', mealType: 'dejeuner' },
+      '2026-11-10',
+    );
+    assert.equal(lunch.subtitle, 'On mange quoi ce midi ?');
+    const tomorrow = homeGreeting(
+      'Sacha',
+      new Date('2026-11-10T21:00:00'),
+      { date: '2026-11-11', mealType: 'diner' },
+      '2026-11-10',
+    );
+    assert.equal(tomorrow.subtitle, 'On mange quoi demain soir ?');
   });
 
   it('week strip is Mon–Sun with today flagged', () => {

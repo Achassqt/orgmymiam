@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useAuth } from '../auth/AuthProvider';
 import { DISH_PASTEL, DishIllo } from '../components/DishIllos';
-import { EmptyState } from '../components/EmptyState';
 import { PullToRefresh } from '../components/PullToRefresh';
 import { HouseholdBadge } from '../components/VisibilityToggle';
 import { MEAL_TYPE_LABELS } from '../data/productSearch';
@@ -193,7 +192,7 @@ export function HomePage() {
     ? recipeMinutes(nextMeal.recipeTitle, nextMeal.recipeNotes)
     : null;
   const nextBadge = nextMeal ? nextMealBadgeLabel(nextMeal, today) : '';
-  const greeting = homeGreeting(session?.user.displayName);
+  const greeting = homeGreeting(session?.user.displayName, new Date(), nextMeal, today);
 
   return (
     <PullToRefresh>
@@ -232,21 +231,16 @@ export function HomePage() {
             )}
           </Link>
         ) : (
-          <div className="home-tonight-empty">
-            <EmptyState
-              illo="calendar"
-              title="Aucun repas prévu"
-              description={
-                recipesCount === 0
-                  ? 'Commence par une recette, puis place-la dans le planning.'
-                  : 'Ajoute un créneau pour voir le prochain repas ici.'
-              }
-              action={
-                <Link className="primary-btn" to={recipesCount === 0 ? '/recettes' : '/plans'}>
-                  {recipesCount === 0 ? 'Ajouter une recette' : 'Ajouter un repas'}
-                </Link>
-              }
-            />
+          <div className="home-tonight-empty home-tonight-empty-compact">
+            <p className="home-empty-title">Rien de prévu pour l’instant</p>
+            <p className="home-empty-desc">
+              {recipesCount === 0
+                ? 'Crée une recette, puis place-la dans le planning.'
+                : 'Planifie un repas pour le voir ici.'}
+            </p>
+            <Link className="primary-btn" to={recipesCount === 0 ? '/recettes' : '/plans'}>
+              {recipesCount === 0 ? 'Ajouter une recette' : 'Planifier un repas'}
+            </Link>
           </div>
         )}
 
