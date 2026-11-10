@@ -1919,6 +1919,28 @@ textarea {
   cursor: default;
 }
 
+.shop-reorder-bar {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.75rem;
+  justify-items: start;
+}
+
+.shop-reorder-hint {
+  margin: 0;
+}
+
+.shop-item-reorder {
+  display: grid;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.shop-item-reorder .icon-btn.soft {
+  min-width: 44px;
+  min-height: 44px;
+}
+
 .planning-day-title {
   margin: 0;
   font-family: var(--font-display);
