@@ -2,10 +2,11 @@ type IlloProps = {
   className?: string;
 };
 
-/** Cartoon food SVGs — clean shapes, soft highlights, shared palette. */
+/** Empty-state / decorative cartoon SVGs (palette aligned to forêt tokens).
+ *  Dish plates for Accueil/Planning: see DishIllos.tsx. */
 
-const INK = '#1E1B4B';
-const SHADOW = 'rgba(30, 27, 75, 0.12)';
+const INK = '#1F3D2B';
+const SHADOW = 'rgba(31, 61, 43, 0.12)';
 
 function SoftShadow({ cx = 80, cy = 128, rx = 44 }: { cx?: number; cy?: number; rx?: number }) {
   return <ellipse cx={cx} cy={cy} rx={rx} ry={7.5} fill={SHADOW} />;

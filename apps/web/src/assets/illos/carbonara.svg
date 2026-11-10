@@ -1,0 +1,21 @@
+<svg width="170" height="160" viewBox="0 0 170 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+<ellipse cx="88" cy="146" rx="70" ry="9" fill="#1F3D2B" fill-opacity="0.12"/>
+<path d="M12 80 C14 124 46 144 85 144 C124 144 156 124 158 80 Z" fill="#FFFFFF"/>
+<path d="M12 80 C14 124 46 144 85 144 C124 144 156 124 158 80 Z" fill="#A9BFA0" fill-opacity="0.25"/>
+<path d="M30 112 C48 132 122 132 140 112" stroke="#A9BFA0" stroke-width="3" stroke-linecap="round"/>
+<ellipse cx="85" cy="80" rx="73" ry="20" fill="#FFFFFF"/>
+<ellipse cx="85" cy="80" rx="64" ry="15" fill="#F1E6CF"/>
+<path d="M28 82 C34 52 58 36 85 35 C112 36 136 52 142 82 C120 92 50 92 28 82 Z" fill="#F4CB6F"/>
+<path d="M40 74 C50 60 60 70 70 58 C80 46 92 62 104 50 C114 42 124 58 132 66" stroke="#DFA640" stroke-width="3" stroke-linecap="round"/>
+<path d="M36 82 C48 70 62 80 76 68 C90 58 102 74 116 64 C126 58 134 70 138 78" stroke="#DFA640" stroke-width="3" stroke-linecap="round"/>
+<path d="M54 52 C64 44 74 54 86 46 C96 40 106 48 114 50" stroke="#E7B450" stroke-width="3" stroke-linecap="round"/>
+<rect x="56" y="56" width="20" height="10" rx="4" transform="rotate(-18 56 56)" fill="#D9643A"/>
+<rect x="58" y="58" width="15" height="3" rx="1.5" transform="rotate(-18 58 58)" fill="#F2A585"/>
+<rect x="94" y="48" width="20" height="10" rx="4" transform="rotate(14 94 48)" fill="#D9643A"/>
+<rect x="96" y="50" width="15" height="3" rx="1.5" transform="rotate(14 96 50)" fill="#F2A585"/>
+<rect x="104" y="70" width="18" height="9" rx="4" transform="rotate(-8 104 70)" fill="#C9542D"/>
+<rect x="72" y="74" width="18" height="9" rx="4" transform="rotate(10 72 74)" fill="#D9643A"/>
+<circle cx="66" cy="48" r="2" fill="#1F3D2B"/><circle cx="88" cy="58" r="1.8" fill="#1F3D2B"/><circle cx="122" cy="62" r="1.8" fill="#1F3D2B"/><circle cx="48" cy="70" r="1.8" fill="#1F3D2B"/><circle cx="96" cy="76" r="1.6" fill="#1F3D2B"/>
+<circle cx="80" cy="42" r="3" fill="#FFF6DD"/><circle cx="110" cy="60" r="3" fill="#FFF6DD"/><circle cx="60" cy="66" r="3" fill="#FFF6DD"/>
+<path d="M118 34 C122 26 130 24 136 26 C132 32 126 36 118 34 Z" fill="#6E9461"/>
+</svg>

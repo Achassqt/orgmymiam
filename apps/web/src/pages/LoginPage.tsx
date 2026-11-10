@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { ApiError } from '../api/client';
-import { DecorDots, IlloBowl } from '../components/FoodIllos';
+import { DishIlloFrame } from '../components/DishIllos';
+import { DecorDots } from '../components/FoodIllos';
 
 export function LoginPage() {
   const { session, login, loading } = useAuth();
@@ -37,8 +38,8 @@ export function LoginPage() {
       <div className="auth-card">
         <div className="auth-hero panel-orange">
           <DecorDots className="hero-decor" />
-          <div className="auth-hero-illo float-soft" aria-hidden>
-            <IlloBowl className="food-illo" />
+          <div className="auth-hero-illo float-soft dish-illo-strip" aria-hidden>
+            <DishIlloFrame dish="carbonara" size="lg" />
           </div>
           <p className="brand">OrgMyMiam</p>
           <p className="auth-tagline">À table — organisez vos repas !</p>
