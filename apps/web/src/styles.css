@@ -859,7 +859,23 @@ select {
 }
 
 .ingredient-name {
-  font-size: 1rem;
+  display: block;
+  font-family: var(--font-sans, inherit);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--forest);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.recipes-add-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  align-self: flex-start;
+}
+
+.screen-recettes .page-heading {
+  align-items: flex-start;
 }
 
 .draft-panel {

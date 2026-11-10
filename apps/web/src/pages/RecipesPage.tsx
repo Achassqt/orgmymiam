@@ -60,10 +60,10 @@ export function RecipesPage() {
           {recipes.length > 0 ? (
             <button
               type="button"
-              className="primary-btn"
+              className="primary-btn recipes-add-btn"
               onClick={() => setMode('create')}
             >
-              Nouvelle
+              Ajouter
             </button>
           ) : null}
         </div>

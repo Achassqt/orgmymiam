@@ -239,7 +239,7 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
 
   return (
     <div className="editor-panel recipe-editor soft-card">
-      <div className="editor-header editor-header-stack">
+      <div className="editor-header editor-header-stack editor-header-left">
         <button type="button" className="back-link" onClick={onCancel}>
           ← Retour
         </button>
