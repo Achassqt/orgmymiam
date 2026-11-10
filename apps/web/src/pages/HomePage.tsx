@@ -11,6 +11,7 @@ import { db } from '../db/database';
 import { useHousehold } from '../hooks/useHousehold';
 import {
   formatMinutes,
+  homeGreeting,
   mealTypeOrder,
   nextMealBadgeLabel,
   pickDishIllo,
@@ -192,10 +193,15 @@ export function HomePage() {
     ? recipeMinutes(nextMeal.recipeTitle, nextMeal.recipeNotes)
     : null;
   const nextBadge = nextMeal ? nextMealBadgeLabel(nextMeal, today) : '';
+  const greeting = homeGreeting(session?.user.displayName);
 
   return (
     <PullToRefresh>
       <section className="page-section home-accueil page-enter">
+        <div className="home-greeting">
+          <h1 className="home-greeting-title">{greeting.title}</h1>
+          <p className="home-greeting-sub">{greeting.subtitle}</p>
+        </div>
         {!weekMeals ? (
           <p className="empty">Chargement…</p>
         ) : nextMeal && nextDish ? (

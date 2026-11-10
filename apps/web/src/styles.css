@@ -137,6 +137,18 @@ a:focus-visible {
   color: var(--forest);
 }
 
+a.topbar-brand {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  line-height: 1.1;
+}
+
+a.topbar-brand:hover {
+  color: var(--forest);
+}
+
 .burger-icon-svg {
   width: 1.375rem;
   height: 1.375rem;
@@ -728,8 +740,6 @@ select {
   justify-content: space-between;
   gap: 0.85rem;
   margin-bottom: 1rem;
-  /* place pour le burger flottant (chrome Accueil/Planning) */
-  padding-right: 3.75rem;
   box-sizing: border-box;
 }
 
@@ -743,7 +753,6 @@ select {
 
 .page-back-row {
   margin: 0 0 0.15rem;
-  padding-right: 3.75rem;
 }
 
 .editor-header-stack {
@@ -773,8 +782,6 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  /* place pour le burger flottant */
-  padding-right: 3.75rem;
   box-sizing: border-box;
 }
 
@@ -1232,61 +1239,9 @@ textarea {
 
 /* —— Accueil fidèle maquette (OMM-32) —— */
 
-.topbar.topbar-home {
-  align-items: flex-start;
-  gap: 0.75rem;
-  background: transparent;
-  border-bottom: 0;
-  backdrop-filter: none;
-  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
-  padding-bottom: 0.35rem;
-}
-
-/* Chrome transparent sans brand — Planning + autres écrans (OMM-42) */
-.app-shell-planning,
-.app-shell-plain {
-  position: relative;
-}
-
-.topbar.topbar-planning,
-.topbar.topbar-plain {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
-  gap: 0.75rem;
-  background: transparent;
-  border-bottom: 0;
-  backdrop-filter: none;
-  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
-  padding-bottom: 0.35rem;
-  /* hors flux : pas de ligne brand au-dessus du titre de page */
-  height: auto;
-  pointer-events: none;
-}
-
-.topbar.topbar-planning .burger-trigger,
-.topbar.topbar-plain .burger-trigger {
-  pointer-events: auto;
-}
-
-.topbar-planning-grow,
-.topbar-plain-grow {
-  display: none;
-}
-
-.app-shell-planning > .content,
-.app-shell-plain > .content {
-  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
-}
-
 .home-greeting {
   min-width: 0;
-  flex: 1;
+  margin: 0 0 0.85rem;
 }
 
 .home-greeting-title {
@@ -1673,8 +1628,6 @@ textarea {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
-  /* laisse la place au burger (48px) à droite du titre, comme Accueil */
-  padding-right: 3.75rem;
   min-height: 48px;
   box-sizing: border-box;
 }
@@ -1969,8 +1922,6 @@ textarea {
 }
 
 .planning-editor .editor-header {
-  /* laisse la place au burger (48px), comme Planning / Accueil */
-  padding-right: 3.75rem;
   min-height: 48px;
   box-sizing: border-box;
 }

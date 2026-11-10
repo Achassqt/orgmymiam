@@ -1,8 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '../auth/AuthProvider';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useNewMemberToast } from '../hooks/useNewMemberToast';
-import { homeGreeting } from '../lib/homeHub';
 import { BurgerDrawer } from './BurgerDrawer';
 import { OnboardingOverlay } from './OnboardingOverlay';
 import { PwaInstallBanner } from './PwaInstallBanner';
@@ -102,40 +100,14 @@ const NAV: Array<{
 export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const burgerRef = useRef<HTMLButtonElement>(null);
-  const location = useLocation();
-  const { session } = useAuth();
-  const isHome = location.pathname === '/';
-  const isPlanning = location.pathname === '/plans';
-  /* Autres routes : chrome transparent sans brand (comme Planning). */
-  const isPlainChrome = !isHome;
-  const greeting = homeGreeting(session?.user.displayName);
   useNewMemberToast();
 
-  const topbarClass = isHome
-    ? 'topbar topbar-home'
-    : isPlanning
-      ? 'topbar topbar-planning'
-      : 'topbar topbar-plain';
-
   return (
-    <div
-      className={
-        isPlanning
-          ? 'app-shell app-shell-planning'
-          : isPlainChrome
-            ? 'app-shell app-shell-plain'
-            : 'app-shell'
-      }
-    >
-      <header className={topbarClass}>
-        {isHome ? (
-          <div className="home-greeting">
-            <h1 className="home-greeting-title">{greeting.title}</h1>
-            <p className="home-greeting-sub">{greeting.subtitle}</p>
-          </div>
-        ) : (
-          <div className="topbar-plain-grow" aria-hidden />
-        )}
+    <div className="app-shell">
+      <header className="topbar">
+        <Link to="/" className="brand topbar-brand" aria-label="OrgMyMiam, accueil">
+          OrgMyMiam
+        </Link>
         <button
           ref={burgerRef}
           type="button"
