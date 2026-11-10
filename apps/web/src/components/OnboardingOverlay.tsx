@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { getMeta, META_KEYS, setMeta } from '../db/database';
-import { IlloCart, IlloChef } from './FoodIllos';
+import { DishIlloFrame } from './DishIllos';
 
 type DoneMap = Record<string, true>;
 
@@ -12,14 +12,14 @@ const STEPS = [
     body: 'Ajoute tes plats du quotidien — on s’occupe des quantités.',
     cta: 'Voir les recettes',
     to: '/recettes',
-    Illo: IlloChef,
+    dish: 'poulet' as const,
   },
   {
     title: 'Génère ta liste',
     body: 'Planifie tes repas, puis lance ta liste de courses en un tap.',
     cta: 'Voir le planning',
     to: '/plans',
-    Illo: IlloCart,
+    dish: 'salade' as const,
   },
 ] as const;
 
@@ -63,17 +63,21 @@ export function OnboardingOverlay() {
   if (!ready || !open || !userId) return null;
 
   const current = STEPS[step]!;
-  const Illo = current.Illo;
   const isLast = step >= STEPS.length - 1;
 
   return (
-    <div className="onboarding-backdrop" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+    <div
+      className="onboarding-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboarding-title"
+    >
       <div className="onboarding-card page-enter">
         <button type="button" className="onboarding-skip" onClick={() => void finish()}>
           Passer
         </button>
         <div className="onboarding-illo float-soft" aria-hidden>
-          <Illo className="food-illo food-illo-lg" />
+          <DishIlloFrame dish={current.dish} size="lg" />
         </div>
         <p className="onboarding-step">
           {step + 1}/{STEPS.length}
