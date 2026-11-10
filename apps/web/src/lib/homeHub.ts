@@ -10,8 +10,43 @@ export const PLANNING_MEAL_TYPES = [
   'dejeuner',
   'collation',
   'diner',
+  'en_cas',
 ] as const;
 export type PlanningMealType = (typeof PLANNING_MEAL_TYPES)[number];
+
+/** Normalise un ordre custom (persistance meta) vers la liste complète. */
+export function normalizePlanningMealOrder(
+  order: readonly string[] | null | undefined,
+): PlanningMealType[] {
+  const known = new Set<string>(PLANNING_MEAL_TYPES);
+  const seen = new Set<string>();
+  const next: PlanningMealType[] = [];
+  for (const raw of order ?? []) {
+    if (!known.has(raw) || seen.has(raw)) continue;
+    seen.add(raw);
+    next.push(raw as PlanningMealType);
+  }
+  for (const type of PLANNING_MEAL_TYPES) {
+    if (!seen.has(type)) next.push(type);
+  }
+  return next;
+}
+
+export function movePlanningMealType(
+  order: readonly PlanningMealType[],
+  mealType: PlanningMealType,
+  direction: -1 | 1,
+): PlanningMealType[] {
+  const list = [...order];
+  const idx = list.indexOf(mealType);
+  if (idx < 0) return list;
+  const target = idx + direction;
+  if (target < 0 || target >= list.length) return list;
+  const tmp = list[idx]!;
+  list[idx] = list[target]!;
+  list[target] = tmp;
+  return list;
+}
 
 const DAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'] as const;
 const DAY_FULL = [
@@ -106,6 +141,7 @@ export function mealMomentPhrase(
     if (mealType === 'dejeuner') return 'midi';
     if (mealType === 'collation') return 'après-midi';
     if (mealType === 'diner') return 'soir';
+    if (mealType === 'en_cas') return 'en-cas';
     return 'prochain repas';
   };
 
@@ -124,6 +160,7 @@ export function mealMomentPhrase(
     if (slot === 'matin') return 'ce matin';
     if (slot === 'midi') return 'ce midi';
     if (slot === 'après-midi') return 'cet après-midi';
+    if (slot === 'en-cas') return 'comme en-cas';
     return 'ce soir';
   }
 
@@ -132,6 +169,7 @@ export function mealMomentPhrase(
     if (slot === 'matin') return 'demain matin';
     if (slot === 'midi') return 'demain midi';
     if (slot === 'après-midi') return 'demain après-midi';
+    if (slot === 'en-cas') return 'demain en-cas';
     return 'demain soir';
   }
 
@@ -222,9 +260,16 @@ export const MEAL_TYPE_HOUR: Record<string, number> = {
   dejeuner: 12,
   collation: 16,
   diner: 19,
+  en_cas: 21,
 };
 
-const MEAL_TYPE_ORDER = ['petit_dejeuner', 'dejeuner', 'collation', 'diner'] as const;
+const MEAL_TYPE_ORDER = [
+  'petit_dejeuner',
+  'dejeuner',
+  'collation',
+  'diner',
+  'en_cas',
+] as const;
 
 export function mealTypeOrder(mealType: string): number {
   const idx = (MEAL_TYPE_ORDER as readonly string[]).indexOf(mealType);
@@ -274,13 +319,16 @@ export function nextMealBadgeLabel(
           ? 'Dîner'
           : meal.mealType === 'collation'
             ? 'Goûter'
-            : meal.mealType;
+            : meal.mealType === 'en_cas'
+              ? 'En-cas'
+              : meal.mealType;
 
   if (meal.date === today) {
     if (meal.mealType === 'diner') return `Ce soir · ${mealLabel}`;
     if (meal.mealType === 'dejeuner') return `À midi · ${mealLabel}`;
     if (meal.mealType === 'petit_dejeuner') return `Ce matin · ${mealLabel}`;
     if (meal.mealType === 'collation') return `Cet après-midi · ${mealLabel}`;
+    if (meal.mealType === 'en_cas') return `En-cas · ${mealLabel}`;
     return `Prochain · ${mealLabel}`;
   }
 

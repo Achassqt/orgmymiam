@@ -1673,17 +1673,17 @@ textarea {
 }
 
 .planning-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
+  display: grid;
+  gap: 0.35rem;
   min-height: 48px;
   box-sizing: border-box;
 }
 
-.planning-titles {
-  display: grid;
-  gap: 0.125rem;
+.planning-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
   min-width: 0;
 }
 
@@ -1698,15 +1698,21 @@ textarea {
 
 .planning-subtitle {
   margin: 0;
+  min-width: 0;
+  flex: 1;
   font-size: 0.9375rem;
-  line-height: 1.35;
+  line-height: 1.2;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .planning-week-nav {
   display: flex;
   gap: 0.5rem;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .planning-week-btn {
@@ -1832,6 +1838,69 @@ textarea {
   gap: 0.5rem;
   min-height: 1.5rem;
   padding-left: 0.125rem;
+}
+
+.planning-day-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.planning-reorder-btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--forest);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.planning-reorder-btn.is-active {
+  background: var(--sage-tint);
+  border-color: color-mix(in srgb, var(--sage) 55%, var(--line));
+}
+
+.planning-slot-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.planning-slot-row .planning-slot,
+.planning-slot-row .planning-slot-empty {
+  flex: 1;
+  min-width: 0;
+}
+
+.planning-slot-reorder {
+  display: grid;
+  gap: 0.25rem;
+  align-content: center;
+}
+
+.planning-slot-move {
+  appearance: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--forest);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.planning-slot-move:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .planning-day-title {

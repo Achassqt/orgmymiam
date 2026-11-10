@@ -138,12 +138,13 @@ describe('homeHub', () => {
     );
   });
 
-  it('PLANNING_MEAL_TYPES includes breakfast and snack in chrono order', () => {
+  it('PLANNING_MEAL_TYPES includes breakfast snack dinner and en-cas', () => {
     assert.deepEqual([...PLANNING_MEAL_TYPES], [
       'petit_dejeuner',
       'dejeuner',
       'collation',
       'diner',
+      'en_cas',
     ]);
   });
 });

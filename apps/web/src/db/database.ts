@@ -76,6 +76,8 @@ export const META_KEYS = {
   nameNormalizeLigaturesV2: 'nameNormalizeLigaturesV2',
   /** Titres listes courses sans tiret cadratin (migration locale). */
   shoppingListEmDashSanitizeV1: 'shoppingListEmDashSanitizeV1',
+  /** Ordre des créneaux Planning (MealType[]) - local appareil. */
+  planningMealOrder: 'planningMealOrder',
 } as const;
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';
