@@ -232,9 +232,11 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
     : '';
 
   return (
-    <div className="editor-panel">
+    <div className="editor-panel recipe-editor soft-card">
       <div className="editor-header">
-        <h2>{recipe ? 'Modifier la recette' : 'Nouvelle recette'}</h2>
+        <h2 className="screen-title editor-title">
+          {recipe ? 'Modifier la recette' : 'Nouvelle recette'}
+        </h2>
         <button type="button" className="ghost-btn" onClick={onCancel}>
           Fermer
         </button>

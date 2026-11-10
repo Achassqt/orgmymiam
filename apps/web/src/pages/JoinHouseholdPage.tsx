@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
+import { DishIlloFrame } from '../components/DishIllos';
 import { useHousehold } from '../hooks/useHousehold';
 
 export function JoinHouseholdPage() {
@@ -36,11 +37,21 @@ export function JoinHouseholdPage() {
   if (!session) {
     return (
       <div className="auth-screen">
-        <div className="auth-card">
-          <p className="brand">OrgMyMiam</p>
+        <div className="auth-card soft-card">
+          <div className="auth-hero panel-sage">
+            <div className="auth-hero-illo float-soft" aria-hidden>
+              <DishIlloFrame dish="soupe" size="lg" />
+            </div>
+            <p className="brand">OrgMyMiam</p>
+            <p className="auth-tagline">Rejoins le foyer familial.</p>
+          </div>
           <h1>Rejoindre un foyer</h1>
           <p className="lede">Connecte-toi pour utiliser le code d’invitation.</p>
-          {code ? <p className="meta">Code : <strong className="invite-code">{code}</strong></p> : null}
+          {code ? (
+            <p className="meta auth-code-hint">
+              Code : <strong className="invite-code">{code}</strong>
+            </p>
+          ) : null}
           <div className="quick-links">
             <Link to={`/login?next=${encodeURIComponent(`/rejoindre?code=${code}`)}`}>
               Connexion
@@ -56,8 +67,14 @@ export function JoinHouseholdPage() {
 
   return (
     <div className="auth-screen">
-      <div className="auth-card">
-        <p className="brand">OrgMyMiam</p>
+      <div className="auth-card soft-card">
+        <div className="auth-hero panel-sand">
+          <div className="auth-hero-illo float-soft" aria-hidden>
+            <DishIlloFrame dish="soupe" size="lg" />
+          </div>
+          <p className="brand">OrgMyMiam</p>
+          <p className="auth-tagline">Un code, et tu es dans le foyer.</p>
+        </div>
         <h1>Rejoindre un foyer</h1>
         <p className="lede">Entre le code à 6 caractères reçu par un membre.</p>
         <form className="stack-form" onSubmit={(e) => void onSubmit(e)}>
@@ -74,14 +91,14 @@ export function JoinHouseholdPage() {
           </label>
           <button
             type="submit"
-            className="primary-btn"
+            className="primary-btn bounce-press"
             disabled={loading || code.trim().length !== 6}
           >
             Rejoindre
           </button>
           {error ? <p className="form-error">{error}</p> : null}
         </form>
-        <p className="meta">
+        <p className="auth-switch">
           <Link to="/foyer">Gérer mon foyer</Link>
         </p>
       </div>

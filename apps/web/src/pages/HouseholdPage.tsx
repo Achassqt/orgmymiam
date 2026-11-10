@@ -58,10 +58,10 @@ export function HouseholdPage() {
 
   if (isMember && household) {
     return (
-      <section className="page-section">
+      <section className="page-section page-enter screen-foyer">
         <div className="page-heading">
           <div>
-            <h1>Foyer</h1>
+            <h1 className="screen-title">Foyer</h1>
             <p className="lede">Partage recettes, planning et courses avec ta famille.</p>
           </div>
           <Link to="/" className="ghost-btn">
@@ -69,8 +69,9 @@ export function HouseholdPage() {
           </Link>
         </div>
 
-        <div className="household-card">
-          <h2 className="subhead">{household.name}</h2>
+        <div className="household-card soft-card">
+          <p className="household-kicker">Foyer partagé</p>
+          <h2 className="household-name">{household.name}</h2>
           <p className="meta">
             {members.length} membre{members.length === 1 ? '' : 's'} · code{' '}
             <strong className="invite-code">{household.inviteCode}</strong>
@@ -104,9 +105,12 @@ export function HouseholdPage() {
         </div>
 
         <h2 className="subhead">Membres</h2>
-        <ul className="entity-list">
+        <ul className="entity-list member-list">
           {members.map((member) => (
-            <li key={member._id}>
+            <li key={member._id} className="member-card">
+              <span className="member-avatar" aria-hidden>
+                {member.displayName.slice(0, 1).toUpperCase()}
+              </span>
               <div className="entity-main-btn static">
                 <strong>
                   {member.displayName}
@@ -124,15 +128,15 @@ export function HouseholdPage() {
   }
 
   return (
-    <section className="page-section">
+    <section className="page-section page-enter screen-foyer">
       <div className="page-heading">
         <div>
-          <h1>Foyer</h1>
+          <h1 className="screen-title">Foyer</h1>
           <p className="lede">Crée un foyer ou rejoins-en un avec un code à 6 caractères.</p>
         </div>
       </div>
 
-      <form className="stack-form generate-box" onSubmit={(e) => void onCreate(e)}>
+      <form className="stack-form generate-box soft-card" onSubmit={(e) => void onCreate(e)}>
         <h2 className="subhead">Créer un foyer</h2>
         <label>
           Nom
@@ -143,7 +147,7 @@ export function HouseholdPage() {
         </button>
       </form>
 
-      <form className="stack-form generate-box" onSubmit={(e) => void onJoin(e)}>
+      <form className="stack-form generate-box soft-card" onSubmit={(e) => void onJoin(e)}>
         <h2 className="subhead">Rejoindre</h2>
         <label>
           Code

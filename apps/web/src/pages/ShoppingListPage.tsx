@@ -116,9 +116,13 @@ export function ShoppingListPage() {
 
   return (
     <PullToRefresh>
-      <section className="page-section page-enter">
-        <h1>Courses</h1>
-        <p className="lede">Génère depuis un planning, coche au fur et à mesure.</p>
+      <section className="page-section page-enter screen-courses">
+        <div className="page-heading">
+          <div>
+            <h1 className="screen-title">Courses</h1>
+            <p className="lede">Génère depuis un planning, coche au fur et à mesure.</p>
+          </div>
+        </div>
 
         {showEmptyHub ? (
           <EmptyState
@@ -132,7 +136,8 @@ export function ShoppingListPage() {
             }
           />
         ) : (
-          <div className="stack-form generate-box">
+          <div className="stack-form generate-box soft-card">
+            <h2 className="subhead generate-box-title">Nouvelle liste</h2>
             <label>
               Depuis un planning
               <select value={mealPlanId} onChange={(e) => setMealPlanId(e.target.value)}>
@@ -187,25 +192,40 @@ export function ShoppingListPage() {
         {lists.length > 0 ? (
           <>
             <h2 className="subhead">Mes listes</h2>
-            <ul className="entity-list">
+            <ul className="entity-list shop-hub-list">
               {lists.map((list) => {
                 const checked = list.items.filter((i) => i.checked).length;
+                const total = list.items.length;
+                const pct = total === 0 ? 0 : Math.round((checked / total) * 100);
                 return (
-                  <li key={list._id}>
+                  <li key={list._id} className="shop-hub-card">
                     <button
                       type="button"
-                      className="entity-main-btn"
+                      className="entity-main-btn shop-list-card-btn"
                       onClick={() => setSelectedId(list._id)}
                     >
-                      <strong>
-                        {list.title} <HouseholdBadge visibility={list.visibility} />
-                      </strong>
-                      <span className="meta">
-                        {list.status === 'open' ? 'Ouverte' : 'Terminée'} · {checked}/
-                        {list.items.length}
-                        {list.visibility === 'household'
-                          ? ` · ${list.memberIds.length} membre${list.memberIds.length === 1 ? '' : 's'}`
-                          : ''}
+                      <span className="shop-hub-icon" aria-hidden>
+                        <ShopBasketIcon />
+                      </span>
+                      <span className="shop-hub-body">
+                        <strong className="shop-hub-title">
+                          {list.title} <HouseholdBadge visibility={list.visibility} />
+                        </strong>
+                        <span className="meta">
+                          {list.status === 'open' ? 'Ouverte' : 'Terminée'}
+                          {list.visibility === 'household'
+                            ? ` · ${list.memberIds.length} membre${list.memberIds.length === 1 ? '' : 's'}`
+                            : ''}
+                        </span>
+                        <span className="shop-hub-progress" aria-hidden>
+                          <span className="shop-hub-progress-bar" style={{ width: `${pct}%` }} />
+                        </span>
+                        <span className="shop-hub-fraction">
+                          <span className="shop-hub-fraction-num">
+                            {checked}/{total}
+                          </span>{' '}
+                          cochés
+                        </span>
                       </span>
                     </button>
                     <button
@@ -228,5 +248,25 @@ export function ShoppingListPage() {
         ) : null}
       </section>
     </PullToRefresh>
+  );
+}
+
+function ShopBasketIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M3.5 10h17l-1.6 8.6a2 2 0 0 1-2 1.6H7.1a2 2 0 0 1-2-1.6z"
+        stroke="#1F3D2B"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 10l4-6 4 6M9 13.5v3.5M12 13.5v3.5M15 13.5v3.5"
+        stroke="#1F3D2B"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

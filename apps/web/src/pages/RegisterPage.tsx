@@ -3,7 +3,6 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { ApiError } from '../api/client';
 import { DishIlloFrame } from '../components/DishIllos';
-import { DecorDots } from '../components/FoodIllos';
 
 export function RegisterPage() {
   const { session, register, loading } = useAuth();
@@ -40,10 +39,9 @@ export function RegisterPage() {
 
   return (
     <div className="auth-screen">
-      <div className="auth-card">
-        <div className="auth-hero panel-yellow">
-          <DecorDots className="hero-decor" />
-          <div className="auth-hero-illo float-soft dish-illo-strip" aria-hidden>
+      <div className="auth-card soft-card">
+        <div className="auth-hero panel-sand">
+          <div className="auth-hero-illo float-soft" aria-hidden>
             <DishIlloFrame dish="salade" size="lg" />
           </div>
           <p className="brand">OrgMyMiam</p>

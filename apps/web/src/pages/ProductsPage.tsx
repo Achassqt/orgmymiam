@@ -78,10 +78,10 @@ export function ProductsPage() {
   }
 
   return (
-    <section className="page-section page-enter">
+    <section className="page-section page-enter screen-produits">
       <div className="page-heading">
         <div>
-          <h1>Produits</h1>
+          <h1 className="screen-title">Produits</h1>
           <p className="lede">Catalogue perso — aussi accessible depuis les recettes.</p>
         </div>
         <Link className="ghost-btn" to="/recettes">
@@ -89,16 +89,14 @@ export function ProductsPage() {
         </Link>
       </div>
 
-      <div className="product-create-unit">
+      <div className="product-create-unit soft-card product-tools">
         <label>
           Unité par défaut (nouveaux produits)
           <UnitSelect value={defaultUnit} onChange={setDefaultUnit} />
         </label>
+        <ProductSearchBox busy={busy} onCreate={handleCreate} onSelect={handleSelect} />
+        {feedback ? <p className="search-notice">{feedback}</p> : null}
       </div>
-
-      <ProductSearchBox busy={busy} onCreate={handleCreate} onSelect={handleSelect} />
-
-      {feedback ? <p className="search-notice">{feedback}</p> : null}
 
       <h2 className="subhead">Mes produits</h2>
       {products.length > 0 ? (
@@ -126,10 +124,11 @@ export function ProductsPage() {
           <p className="empty">Aucun résultat pour ce filtre.</p>
         )
       ) : (
-        <ul className="entity-list">
+        <ul className="entity-list product-list">
           {filteredMine.map((product) => (
-            <li key={product._id}>
-              <div>
+            <li key={product._id} className="product-card">
+              <span className="product-dot" aria-hidden />
+              <div className="product-card-body">
                 <strong>{product.name}</strong>
                 <span className="meta">
                   {categoryLabel(product.category)} · {unitDisplayLabel(product.defaultUnit)}

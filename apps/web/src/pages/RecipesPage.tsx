@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useAuth } from '../auth/AuthProvider';
+import { DISH_PASTEL, DishIllo } from '../components/DishIllos';
 import { EmptyState } from '../components/EmptyState';
 import { TrashIcon } from '../components/icons';
 import { PullToRefresh } from '../components/PullToRefresh';
@@ -9,6 +10,7 @@ import { RecipeEditor } from '../components/RecipeEditor';
 import { HouseholdBadge } from '../components/VisibilityToggle';
 import { softDeleteRecipe } from '../data/crud';
 import { db } from '../db/database';
+import { formatMinutes, pickDishIllo, recipeMinutes } from '../lib/homeHub';
 
 export function RecipesPage() {
   const { session } = useAuth();
@@ -49,10 +51,10 @@ export function RecipesPage() {
 
   return (
     <PullToRefresh>
-      <section className="page-section page-enter">
+      <section className="page-section page-enter screen-recettes">
         <div className="page-heading">
           <div>
-            <h1>Recettes</h1>
+            <h1 className="screen-title">Recettes</h1>
             <p className="lede">Tes plats avec portions et ingrédients.</p>
           </div>
           {recipes.length > 0 ? (
@@ -82,40 +84,58 @@ export function RecipesPage() {
             }
           />
         ) : (
-          <ul className="entity-list">
-            {recipes.map((recipe) => (
-              <li key={recipe._id}>
-                <button
-                  type="button"
-                  className="entity-main-btn"
-                  onClick={() => {
-                    setSelectedId(recipe._id);
-                    setMode('edit');
-                  }}
-                >
-                  <strong>
-                    {recipe.title} <HouseholdBadge visibility={recipe.visibility} />
-                  </strong>
-                  <span className="meta">
-                    pour {recipe.servings} personne{recipe.servings === 1 ? '' : 's'} ·{' '}
-                    {recipe.ingredients.length} ingrédient
-                    {recipe.ingredients.length === 1 ? '' : 's'}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="icon-btn soft"
-                  aria-label={`Supprimer ${recipe.title}`}
-                  title="Supprimer"
-                  onClick={() => {
-                    if (!window.confirm(`Supprimer « ${recipe.title} » ?`)) return;
-                    void softDeleteRecipe(recipe._id);
-                  }}
-                >
-                  <TrashIcon />
-                </button>
-              </li>
-            ))}
+          <ul className="entity-list recipe-card-list">
+            {recipes.map((recipe) => {
+              const dish = pickDishIllo(recipe.title);
+              const mins = recipeMinutes(recipe.title, recipe.notes);
+              return (
+                <li key={recipe._id} className="recipe-card">
+                  <button
+                    type="button"
+                    className="entity-main-btn recipe-card-btn"
+                    onClick={() => {
+                      setSelectedId(recipe._id);
+                      setMode('edit');
+                    }}
+                  >
+                    <span
+                      className="recipe-card-thumb"
+                      style={{ background: DISH_PASTEL[dish] }}
+                      aria-hidden
+                    >
+                      <DishIllo dish={dish} className="recipe-card-illo" />
+                    </span>
+                    <span className="recipe-card-body">
+                      <strong className="recipe-card-title">
+                        {recipe.title}{' '}
+                        <HouseholdBadge visibility={recipe.visibility} />
+                      </strong>
+                      <span className="meta">
+                        pour {recipe.servings} personne
+                        {recipe.servings === 1 ? '' : 's'} · {recipe.ingredients.length}{' '}
+                        ingrédient
+                        {recipe.ingredients.length === 1 ? '' : 's'}
+                      </span>
+                      {mins != null ? (
+                        <span className="recipe-card-time">{formatMinutes(mins)}</span>
+                      ) : null}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-btn soft"
+                    aria-label={`Supprimer ${recipe.title}`}
+                    title="Supprimer"
+                    onClick={() => {
+                      if (!window.confirm(`Supprimer « ${recipe.title} » ?`)) return;
+                      void softDeleteRecipe(recipe._id);
+                    }}
+                  >
+                    <TrashIcon />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
 
