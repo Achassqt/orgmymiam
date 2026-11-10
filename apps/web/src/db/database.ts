@@ -74,6 +74,8 @@ export const META_KEYS = {
    * après correctif ligatures (œ→oe). Non user-scoped : une fois par appareil.
    */
   nameNormalizeLigaturesV2: 'nameNormalizeLigaturesV2',
+  /** Titres listes courses sans tiret cadratin (migration locale). */
+  shoppingListEmDashSanitizeV1: 'shoppingListEmDashSanitizeV1',
 } as const;
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';

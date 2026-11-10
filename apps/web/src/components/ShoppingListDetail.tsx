@@ -25,6 +25,7 @@ import { formatPlanDate } from '../lib/planDates';
 import {
   formatPrintDate,
   formatShoppingListShareText,
+  sanitizeUiEmDash,
 } from '../lib/shoppingListShare';
 import { formatQuantity } from '../lib/units';
 import { runSync } from '../sync/engine';
@@ -262,8 +263,9 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
 
   async function onShare() {
     if (!list) return;
-    const text = formatShoppingListShareText(list.title, list.items, list.notes);
-    const title = list.title;
+    const safeTitle = sanitizeUiEmDash(list.title);
+    const text = formatShoppingListShareText(safeTitle, list.items, list.notes);
+    const title = safeTitle;
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share({ title, text });
@@ -329,7 +331,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
         </div>
 
         <h1>
-          {list.title} <HouseholdBadge visibility={list.visibility} />
+          {sanitizeUiEmDash(list.title)} <HouseholdBadge visibility={list.visibility} />
         </h1>
         {list.notes ? <p className="list-notes">{list.notes}</p> : null}
         {list.visibility === 'household' ? (
@@ -550,7 +552,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
       <div className="print-sheet" aria-hidden="true">
         <header className="print-sheet-header">
           <p className="print-brand">OrgMyMiam</p>
-          <h1 className="print-title">{list.title}</h1>
+          <h1 className="print-title">{sanitizeUiEmDash(list.title)}</h1>
           {list.notes ? <p className="print-notes">{list.notes}</p> : null}
           <p className="print-date">{formatPrintDate()}</p>
           <p className="print-progress">

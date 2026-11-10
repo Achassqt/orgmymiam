@@ -2,6 +2,14 @@ import type { ShoppingListItem } from '@orgmymiam/shared';
 import { formatPlanDate } from './planDates';
 import { formatQuantity } from './units';
 
+/**
+ * Remplace les tirets cadratin hérités (ex. titres « Courses — … »)
+ * par un séparateur UI autorisé.
+ */
+export function sanitizeUiEmDash(text: string): string {
+  return text.replace(/\s*—\s*/g, ' · ').replace(/ {2,}/g, ' ').trim();
+}
+
 export function shoppingListTitleFromRange(rangeFrom: string, rangeTo: string): string {
   if (rangeFrom === rangeTo) {
     return `Courses · ${formatPlanDate(rangeFrom)}`;
@@ -15,7 +23,7 @@ export function formatShoppingListShareText(
   items: ShoppingListItem[],
   notes?: string | null,
 ): string {
-  const lines: string[] = [title];
+  const lines: string[] = [sanitizeUiEmDash(title)];
   if (notes?.trim()) {
     lines.push(notes.trim());
   }

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import type { ShoppingListItem } from '@orgmymiam/shared';
 import {
   formatShoppingListShareText,
+  sanitizeUiEmDash,
   shoppingListTitleFromRange,
 } from './shoppingListShare';
 
@@ -56,5 +57,16 @@ describe('shoppingListTitleFromRange', () => {
     const range = shoppingListTitleFromRange('2099-01-05', '2099-01-19');
     assert.match(one, /^Courses · /);
     assert.match(range, /→/);
+  });
+});
+
+describe('sanitizeUiEmDash', () => {
+  it('replaces legacy em dashes in list titles', () => {
+    assert.equal(
+      sanitizeUiEmDash('Courses — lun. 9 nov. → mar. 24 nov.'),
+      'Courses · lun. 9 nov. → mar. 24 nov.',
+    );
+    assert.equal(sanitizeUiEmDash('Courses · Aujourd’hui'), 'Courses · Aujourd’hui');
+    assert.doesNotMatch(sanitizeUiEmDash('A — B — C'), /—/);
   });
 });
