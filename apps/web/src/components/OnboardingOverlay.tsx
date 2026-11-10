@@ -1,31 +1,51 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { getMeta, META_KEYS, setMeta } from '../db/database';
 import { DishIlloFrame } from './DishIllos';
 
 type DoneMap = Record<string, true>;
 
+export const ONBOARDING_REPLAY_EVENT = 'omm:replay-onboarding';
+
 const STEPS = [
   {
-    title: 'Crée une recette',
-    body: 'Ajoute tes plats du quotidien, on s’occupe des quantités.',
-    cta: 'Voir les recettes',
-    to: '/recettes',
+    title: 'Crée tes recettes',
+    body: 'Ajoute tes plats du quotidien avec portions et ingrédients.',
     dish: 'poulet' as const,
   },
   {
-    title: 'Génère ta liste',
-    body: 'Planifie tes repas, puis lance ta liste de courses en un tap.',
-    cta: 'Voir le planning',
-    to: '/plans',
+    title: 'Organise ta semaine',
+    body: 'Place tes recettes dans le planning, jour par jour.',
+    dish: 'carbonara' as const,
+  },
+  {
+    title: 'Génère tes courses',
+    body: 'La liste se construit à partir de ton planning.',
     dish: 'salade' as const,
+  },
+  {
+    title: 'Consulte ton planning',
+    body: 'Retrouve le prochain repas et suis ta semaine.',
+    dish: 'soupe' as const,
   },
 ] as const;
 
 async function markDone(userId: string): Promise<void> {
   const existing = (await getMeta<DoneMap>(META_KEYS.onboardingDoneBy)) ?? {};
   await setMeta(META_KEYS.onboardingDoneBy, { ...existing, [userId]: true });
+}
+
+/** Efface le flag « déjà vu » pour relancer le guide depuis le menu. */
+export async function resetOnboardingDone(userId: string): Promise<void> {
+  const existing = (await getMeta<DoneMap>(META_KEYS.onboardingDoneBy)) ?? {};
+  if (!existing[userId]) return;
+  const next = { ...existing };
+  delete next[userId];
+  await setMeta(META_KEYS.onboardingDoneBy, next);
+}
+
+export function requestOnboardingReplay(): void {
+  window.dispatchEvent(new Event(ONBOARDING_REPLAY_EVENT));
 }
 
 export function OnboardingOverlay() {
@@ -54,16 +74,33 @@ export function OnboardingOverlay() {
     };
   }, [userId]);
 
+  useEffect(() => {
+    if (!userId) return;
+    function onReplay() {
+      setStep(0);
+      setOpen(true);
+    }
+    window.addEventListener(ONBOARDING_REPLAY_EVENT, onReplay);
+    return () => window.removeEventListener(ONBOARDING_REPLAY_EVENT, onReplay);
+  }, [userId]);
+
   async function finish() {
     if (!userId) return;
     await markDone(userId);
     setOpen(false);
   }
 
+  function goNext() {
+    if (step >= STEPS.length - 1) {
+      void finish();
+      return;
+    }
+    setStep((s) => s + 1);
+  }
+
   if (!ready || !open || !userId) return null;
 
   const current = STEPS[step]!;
-  const isLast = step >= STEPS.length - 1;
 
   return (
     <div
@@ -85,24 +122,9 @@ export function OnboardingOverlay() {
         <h2 id="onboarding-title">{current.title}</h2>
         <p className="lede">{current.body}</p>
         <div className="onboarding-actions">
-          {isLast ? (
-            <Link className="primary-btn" to={current.to} onClick={() => void finish()}>
-              {current.cta}
-            </Link>
-          ) : (
-            <button type="button" className="primary-btn" onClick={() => setStep((s) => s + 1)}>
-              Suivant
-            </button>
-          )}
-          {!isLast ? (
-            <Link className="ghost-btn" to={current.to} onClick={() => void finish()}>
-              {current.cta}
-            </Link>
-          ) : (
-            <button type="button" className="ghost-btn" onClick={() => void finish()}>
-              C’est parti
-            </button>
-          )}
+          <button type="button" className="primary-btn" onClick={goNext}>
+            Suivant
+          </button>
         </div>
       </div>
     </div>

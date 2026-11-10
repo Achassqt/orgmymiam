@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { useHousehold } from '../hooks/useHousehold';
 import { usePwaInstall } from '../hooks/usePwaInstall';
+import {
+  requestOnboardingReplay,
+  resetOnboardingDone,
+} from './OnboardingOverlay';
 import { SyncIndicator } from './SyncIndicator';
 
 interface BurgerDrawerProps {
@@ -128,6 +132,23 @@ export function BurgerDrawer({ open, onClose, triggerRef }: BurgerDrawerProps) {
           <DrawerLink to="/foyer" onNavigate={onClose} meta={foyerMeta}>
             {foyerLabel}
           </DrawerLink>
+
+          <button
+            type="button"
+            className="burger-link"
+            onClick={() => {
+              const uid = session?.user._id;
+              onClose();
+              if (!uid) return;
+              void (async () => {
+                await resetOnboardingDone(uid);
+                requestOnboardingReplay();
+              })();
+            }}
+          >
+            <span className="burger-link-label">Guide de démarrage</span>
+            <span className="burger-link-meta">Relancer la visite</span>
+          </button>
 
           {pwa.canPrompt ? (
             <button
