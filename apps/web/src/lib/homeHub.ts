@@ -149,3 +149,82 @@ export function weekTileBadge(
   if (dish === 'fondant') return { kind: 'star', tone: 'terra' };
   return { kind: 'leaf', tone: 'sage' };
 }
+
+/** Heure typique de début (locale) pour classer / filtrer le prochain repas. */
+export const MEAL_TYPE_HOUR: Record<string, number> = {
+  petit_dejeuner: 8,
+  dejeuner: 12,
+  collation: 16,
+  diner: 19,
+};
+
+const MEAL_TYPE_ORDER = ['petit_dejeuner', 'dejeuner', 'collation', 'diner'] as const;
+
+export function mealTypeOrder(mealType: string): number {
+  const idx = (MEAL_TYPE_ORDER as readonly string[]).indexOf(mealType);
+  return idx >= 0 ? idx : 99;
+}
+
+export type UpcomingMealLike = {
+  date: string;
+  mealType: string;
+};
+
+/**
+ * Prochain repas selon l’heure actuelle : ignore les créneaux déjà passés
+ * aujourd’hui ; regarde ensuite les jours suivants de la semaine.
+ */
+export function pickNextMealByTime<T extends UpcomingMealLike>(
+  meals: T[],
+  now = new Date(),
+): T | null {
+  if (meals.length === 0) return null;
+  const today = toIsoDate(now);
+  const hour = now.getHours() + now.getMinutes() / 60;
+
+  const upcoming = meals
+    .filter((m) => {
+      if (m.date > today) return true;
+      if (m.date < today) return false;
+      const mealHour = MEAL_TYPE_HOUR[m.mealType] ?? 12;
+      // Encore « à venir » jusqu’à 1 h après l’heure typique.
+      return hour < mealHour + 1;
+    })
+    .sort((a, b) =>
+      a.date === b.date
+        ? mealTypeOrder(a.mealType) - mealTypeOrder(b.mealType)
+        : a.date.localeCompare(b.date),
+    );
+
+  return upcoming[0] ?? null;
+}
+
+/** Badge carte haut Accueil (« Ce soir · Dîner », « Mercredi · Déjeuner », …). */
+export function nextMealBadgeLabel(
+  meal: UpcomingMealLike,
+  today = todayIsoDate(),
+): string {
+  const mealLabel =
+    meal.mealType === 'petit_dejeuner'
+      ? 'Petit-déj'
+      : meal.mealType === 'dejeuner'
+        ? 'Déjeuner'
+        : meal.mealType === 'diner'
+          ? 'Dîner'
+          : meal.mealType === 'collation'
+            ? 'Collation'
+            : meal.mealType;
+
+  if (meal.date === today) {
+    if (meal.mealType === 'diner') return `Ce soir · ${mealLabel}`;
+    if (meal.mealType === 'dejeuner') return `À midi · ${mealLabel}`;
+    if (meal.mealType === 'petit_dejeuner') return `Ce matin · ${mealLabel}`;
+    if (meal.mealType === 'collation') return `Goûter · ${mealLabel}`;
+    return `Prochain · ${mealLabel}`;
+  }
+
+  const d = new Date(`${meal.date}T12:00:00`);
+  const weekday = d.toLocaleDateString('fr-FR', { weekday: 'long' });
+  const dayName = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  return `${dayName} · ${mealLabel}`;
+}

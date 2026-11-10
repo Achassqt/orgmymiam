@@ -5,7 +5,9 @@ import {
   formatMinutes,
   formatWeekSubtitle,
   homeGreeting,
+  nextMealBadgeLabel,
   pickDishIllo,
+  pickNextMealByTime,
   recipeMinutes,
   startOfWeekMonday,
   weekDayStrip,
@@ -72,5 +74,41 @@ describe('homeHub', () => {
     assert.equal(recipeMinutes('Pâtes carbonara', ''), 20);
     assert.equal(formatMinutes(20), '20 min');
     assert.equal(recipeMinutes('Plat mystère', ''), null);
+  });
+
+  it('pickNextMealByTime picks upcoming meal by hour, not empty if later day', () => {
+    const meals = [
+      { date: '2026-11-10', mealType: 'dejeuner', id: 'lunch' },
+      { date: '2026-11-10', mealType: 'diner', id: 'dinner' },
+      { date: '2026-11-11', mealType: 'diner', id: 'tue' },
+    ];
+    const morning = pickNextMealByTime(meals, new Date('2026-11-10T09:00:00'));
+    assert.equal(morning?.id, 'lunch');
+    const afternoon = pickNextMealByTime(meals, new Date('2026-11-10T14:00:00'));
+    assert.equal(afternoon?.id, 'dinner');
+    const late = pickNextMealByTime(meals, new Date('2026-11-10T21:30:00'));
+    assert.equal(late?.id, 'tue');
+  });
+
+  it('pickNextMealByTime skips empty today when a later meal exists', () => {
+    const meals = [{ date: '2026-11-12', mealType: 'diner', id: 'wed' }];
+    const next = pickNextMealByTime(meals, new Date('2026-11-10T11:00:00'));
+    assert.equal(next?.id, 'wed');
+    assert.equal(pickNextMealByTime([], new Date('2026-11-10T11:00:00')), null);
+  });
+
+  it('nextMealBadgeLabel covers today and other days', () => {
+    assert.equal(
+      nextMealBadgeLabel({ date: '2026-11-10', mealType: 'diner' }, '2026-11-10'),
+      'Ce soir · Dîner',
+    );
+    assert.equal(
+      nextMealBadgeLabel({ date: '2026-11-10', mealType: 'dejeuner' }, '2026-11-10'),
+      'À midi · Déjeuner',
+    );
+    assert.match(
+      nextMealBadgeLabel({ date: '2026-11-11', mealType: 'diner' }, '2026-11-10'),
+      /Mercredi · Dîner/,
+    );
   });
 });
