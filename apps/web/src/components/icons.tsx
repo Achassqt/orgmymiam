@@ -1,9 +1,16 @@
-export function TrashIcon() {
+/** Icône suppression — poubelle claire (pas une croix). Tap target géré par .icon-btn. */
+export function TrashIcon({ size = 18 }: { size?: number }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden focusable="false">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      aria-hidden
+      focusable="false"
+    >
       <path
         fill="currentColor"
-        d="M6 2.25h4a.75.75 0 0 1 .7.5l.3.75H13.5a.75.75 0 0 1 0 1.5h-.35l-.7 8.05A1.75 1.75 0 0 1 10.71 14.5H5.29a1.75 1.75 0 0 1-1.74-1.45L2.85 5h-.35a.75.75 0 0 1 0-1.5h2.5l.3-.75a.75.75 0 0 1 .7-.5Zm1.1 1.5-.15.35h1.9l-.15-.35H7.1ZM4.36 5l.68 7.85c.04.45.42.8.87.8h5.18c.45 0 .83-.35.87-.8L12.64 5H4.36Zm2.39 1.5a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4a.75.75 0 0 1 .75-.75Zm2.5 0a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4a.75.75 0 0 1 .75-.75Z"
+        d="M9.5 3a1 1 0 0 0-.9.55L8.2 4.5H5a1 1 0 1 0 0 2h14a1 1 0 1 0 0-2h-3.2l-.4-.95A1 1 0 0 0 14.5 3h-5Zm-2.3 5.5a1 1 0 0 1 1 1.05l.4 9.1a1.5 1.5 0 0 0 1.5 1.45h4.8a1.5 1.5 0 0 0 1.5-1.45l.4-9.1a1 1 0 1 1 2 .09l-.4 9.1A3.5 3.5 0 0 1 14.9 22h-4.8a3.5 3.5 0 0 1-3.5-3.26l-.4-9.1a1 1 0 0 1 1-.14ZM10 10a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1Zm4 0a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1Z"
       />
     </svg>
   );
