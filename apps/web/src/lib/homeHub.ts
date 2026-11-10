@@ -4,8 +4,13 @@ import { todayIsoDate, toIsoDate } from './planDates';
 export const HOME_DISH_KEYS = ['carbonara', 'fondant', 'poulet', 'salade', 'soupe'] as const;
 export type HomeDishKey = (typeof HOME_DISH_KEYS)[number];
 
-/** Créneaux affichés sur les cartes jour Planning (maquette). */
-export const PLANNING_MEAL_TYPES = ['dejeuner', 'diner'] as const;
+/** Créneaux affichés pour le jour sélectionné (Planning). */
+export const PLANNING_MEAL_TYPES = [
+  'petit_dejeuner',
+  'dejeuner',
+  'collation',
+  'diner',
+] as const;
 export type PlanningMealType = (typeof PLANNING_MEAL_TYPES)[number];
 
 const DAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'] as const;
@@ -212,14 +217,14 @@ export function nextMealBadgeLabel(
         : meal.mealType === 'diner'
           ? 'Dîner'
           : meal.mealType === 'collation'
-            ? 'Collation'
+            ? 'Goûter'
             : meal.mealType;
 
   if (meal.date === today) {
     if (meal.mealType === 'diner') return `Ce soir · ${mealLabel}`;
     if (meal.mealType === 'dejeuner') return `À midi · ${mealLabel}`;
     if (meal.mealType === 'petit_dejeuner') return `Ce matin · ${mealLabel}`;
-    if (meal.mealType === 'collation') return `Goûter · ${mealLabel}`;
+    if (meal.mealType === 'collation') return `Cet après-midi · ${mealLabel}`;
     return `Prochain · ${mealLabel}`;
   }
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  PLANNING_MEAL_TYPES,
   addDaysIso,
   formatMinutes,
   formatWeekSubtitle,
@@ -110,5 +111,22 @@ describe('homeHub', () => {
       nextMealBadgeLabel({ date: '2026-11-11', mealType: 'diner' }, '2026-11-10'),
       /Mercredi · Dîner/,
     );
+    assert.equal(
+      nextMealBadgeLabel({ date: '2026-11-10', mealType: 'petit_dejeuner' }, '2026-11-10'),
+      'Ce matin · Petit-déj',
+    );
+    assert.equal(
+      nextMealBadgeLabel({ date: '2026-11-10', mealType: 'collation' }, '2026-11-10'),
+      'Cet après-midi · Goûter',
+    );
+  });
+
+  it('PLANNING_MEAL_TYPES includes breakfast and snack in chrono order', () => {
+    assert.deepEqual([...PLANNING_MEAL_TYPES], [
+      'petit_dejeuner',
+      'dejeuner',
+      'collation',
+      'diner',
+    ]);
   });
 });

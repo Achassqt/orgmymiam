@@ -1,33 +1,32 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { MEAL_TYPES, type MealPlan, type MealSlot, type MealType } from '@orgmymiam/shared';
+import type { MealPlan, MealType } from '@orgmymiam/shared';
 import { useAuth } from '../auth/AuthProvider';
 import { buildMealSlot, createMealPlan, updateMealPlan } from '../data/crud';
 import { MEAL_TYPE_LABELS } from '../data/productSearch';
 import { db } from '../db/database';
+import { PLANNING_MEAL_TYPES } from '../lib/homeHub';
 import { formatPlanDate, todayIsoDate } from '../lib/planDates';
-import { upsertMealSlot } from '../lib/mealSlots';
+import { replaceMealSlotForDayType } from '../lib/mealSlots';
 import { VisibilityToggle } from './VisibilityToggle';
 
 interface MealPlanEditorProps {
   plan?: MealPlan | null;
   onDone: () => void;
   onCancel: () => void;
-  /** Préremplit le formulaire de créneau (Planning → Ajouter un repas). */
+  /** Jour + type de repas du créneau (Planning → Ajouter / Modifier). */
   seedSlot?: { date: string; mealType: MealType } | null;
-}
-
-function addDays(isoDate: string, days: number): string {
-  const d = new Date(`${isoDate}T12:00:00`);
-  d.setDate(d.getDate() + days);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
 }
 
 function personsLabel(n: number): string {
   return `${n} personne${n === 1 ? '' : 's'}`;
+}
+
+function defaultPlanTitle(date: string, mealType: MealType, recipeTitle: string): string {
+  const meal = MEAL_TYPE_LABELS[mealType] ?? mealType;
+  const trimmed = recipeTitle.trim();
+  if (trimmed) return `${meal} · ${trimmed}`.slice(0, 200);
+  return `${meal} · ${formatPlanDate(date)}`.slice(0, 200);
 }
 
 export function MealPlanEditor({
@@ -44,32 +43,40 @@ export function MealPlanEditor({
       [userId],
     ) ?? [];
 
-  const initialDate = seedSlot?.date ?? plan?.startDate ?? todayIsoDate();
-  const [title, setTitle] = useState(plan?.title ?? '');
-  const [startDate, setStartDate] = useState(plan?.startDate ?? initialDate);
-  const [slots, setSlots] = useState(plan?.slots ?? []);
-  const [slotDate, setSlotDate] = useState(initialDate);
-  const [mealType, setMealType] = useState<MealType>(seedSlot?.mealType ?? 'diner');
-  const [recipeId, setRecipeId] = useState('');
-  const [servingsOverride, setServingsOverride] = useState('');
-  const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
+  const initialDate = seedSlot?.date ?? plan?.slots[0]?.date ?? plan?.startDate ?? todayIsoDate();
+  const initialMealType: MealType =
+    seedSlot?.mealType ?? plan?.slots[0]?.mealType ?? 'dejeuner';
+
+  const bootstrapSlot = useMemo(() => {
+    if (!plan) return null;
+    return (
+      plan.slots.find((s) => s.date === initialDate && s.mealType === initialMealType) ??
+      (seedSlot ? null : (plan.slots[0] ?? null))
+    );
+  }, [plan, initialDate, initialMealType, seedSlot]);
+
+  const [slotDate, setSlotDate] = useState(bootstrapSlot?.date ?? initialDate);
+  const [mealType, setMealType] = useState<MealType>(bootstrapSlot?.mealType ?? initialMealType);
+  const [recipeId, setRecipeId] = useState(bootstrapSlot?.recipeId ?? '');
+  const [servingsOverride, setServingsOverride] = useState(
+    bootstrapSlot?.servingsOverride != null ? String(bootstrapSlot.servingsOverride) : '',
+  );
+  const [editingSlotId, setEditingSlotId] = useState<string | null>(bootstrapSlot?.id ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!plan) return;
-    setTitle(plan.title);
-    setStartDate(plan.startDate);
-    setSlots(plan.slots);
-    setSlotDate(seedSlot?.date ?? plan.startDate);
-    if (seedSlot?.mealType) setMealType(seedSlot.mealType);
-  }, [plan, seedSlot]);
-
-  useEffect(() => {
-    if (plan || !seedSlot) return;
-    setStartDate(seedSlot.date);
-    setSlotDate(seedSlot.date);
-    setMealType(seedSlot.mealType);
+    const date = seedSlot?.date ?? plan?.slots[0]?.date ?? plan?.startDate ?? todayIsoDate();
+    const type: MealType = seedSlot?.mealType ?? plan?.slots[0]?.mealType ?? 'dejeuner';
+    const slot =
+      plan?.slots.find((s) => s.date === date && s.mealType === type) ??
+      (seedSlot ? null : (plan?.slots[0] ?? null));
+    setSlotDate(slot?.date ?? date);
+    setMealType(slot?.mealType ?? type);
+    setRecipeId(slot?.recipeId ?? '');
+    setServingsOverride(slot?.servingsOverride != null ? String(slot.servingsOverride) : '');
+    setEditingSlotId(slot?.id ?? null);
+    setError(null);
   }, [plan, seedSlot]);
 
   useEffect(() => {
@@ -84,33 +91,8 @@ export function MealPlanEditor({
   );
 
   const selectedRecipe = recipeId ? recipeById[recipeId] : undefined;
-
-  const sortedSlots = useMemo(
-    () =>
-      [...slots].sort((a, b) =>
-        a.date === b.date
-          ? a.mealType.localeCompare(b.mealType)
-          : a.date.localeCompare(b.date),
-      ),
-    [slots],
-  );
-
-  function resetSlotForm(nextDate?: string) {
-    setEditingSlotId(null);
-    setSlotDate(nextDate ?? startDate);
-    setMealType('diner');
-    setServingsOverride('');
-    if (recipes[0]) setRecipeId(recipes[0]._id);
-  }
-
-  function beginEditSlot(slot: MealSlot) {
-    setEditingSlotId(slot.id);
-    setSlotDate(slot.date);
-    setMealType(slot.mealType);
-    setRecipeId(slot.recipeId);
-    setServingsOverride(slot.servingsOverride != null ? String(slot.servingsOverride) : '');
-    setError(null);
-  }
+  const isEdit = Boolean(editingSlotId);
+  const mealLabel = MEAL_TYPE_LABELS[mealType] ?? mealType;
 
   function parseOverride(): number | null {
     const overrideRaw = servingsOverride.trim();
@@ -122,7 +104,7 @@ export function MealPlanEditor({
     return override;
   }
 
-  function commitSlot() {
+  async function onSave() {
     if (!recipeId) {
       setError('Choisis une recette (crée-en une d’abord si besoin).');
       return;
@@ -134,38 +116,43 @@ export function MealPlanEditor({
       setError(err instanceof Error ? err.message : 'Nombre de personnes invalide');
       return;
     }
-    setError(null);
 
-    const draft = editingSlotId
-      ? {
-          date: slotDate,
-          mealType,
-          recipeId,
-          servingsOverride: override,
-        }
-      : buildMealSlot({
-          date: slotDate,
-          mealType,
-          recipeId,
-          servingsOverride: override,
-        });
-
-    setSlots((prev) => upsertMealSlot(prev, draft, editingSlotId));
-    resetSlotForm(slotDate);
-  }
-
-  async function onSave() {
-    if (!title.trim()) {
-      setError('Titre requis');
-      return;
-    }
     setBusy(true);
     setError(null);
     try {
+      const draft = editingSlotId
+        ? {
+            id: editingSlotId,
+            date: slotDate,
+            mealType,
+            recipeId,
+            servingsOverride: override,
+          }
+        : buildMealSlot({
+            date: slotDate,
+            mealType,
+            recipeId,
+            servingsOverride: override,
+          });
+
+      const nextSlots = replaceMealSlotForDayType(plan?.slots ?? [], draft, editingSlotId);
+      const recipeTitle = recipeById[recipeId]?.title ?? 'Repas';
+      const title = plan?.title?.trim()
+        ? plan.title
+        : defaultPlanTitle(slotDate, mealType, recipeTitle);
+
       if (plan) {
-        await updateMealPlan(plan._id, { title, startDate, slots });
+        await updateMealPlan(plan._id, {
+          title,
+          startDate: plan.startDate < slotDate ? plan.startDate : slotDate,
+          slots: nextSlots,
+        });
       } else {
-        await createMealPlan({ title, startDate, slots });
+        await createMealPlan({
+          title,
+          startDate: slotDate,
+          slots: nextSlots,
+        });
       }
       onDone();
     } catch (err) {
@@ -176,104 +163,38 @@ export function MealPlanEditor({
   }
 
   return (
-    <div className="editor-panel">
+    <div className="editor-panel planning-editor">
       <div className="editor-header">
-        <h2>{plan ? 'Modifier le planning' : 'Nouveau planning'}</h2>
+        <h2>{isEdit ? 'Modifier le repas' : 'Ajouter un repas'}</h2>
         <button type="button" className="ghost-btn" onClick={onCancel}>
           Fermer
         </button>
       </div>
 
-      <div className="stack-form">
+      <p className="planning-editor-context" aria-live="polite">
+        {formatPlanDate(slotDate)} · {mealLabel}
+      </p>
+
+      <div className="stack-form planning-editor-form">
         <label>
-          Titre
-          <input value={title} onChange={(e) => setTitle(e.target.value)} required />
-        </label>
-        <label>
-          Date de début
+          Jour
           <input
             type="date"
-            value={startDate}
-            onChange={(e) => {
-              setStartDate(e.target.value);
-              if (!editingSlotId) setSlotDate(e.target.value);
-            }}
+            value={slotDate}
+            onChange={(e) => setSlotDate(e.target.value)}
             required
           />
         </label>
-        {plan ? (
-          <VisibilityToggle
-            entity="meal_plans"
-            id={plan._id}
-            value={plan.visibility ?? 'private'}
-          />
-        ) : null}
-      </div>
-
-      <h3 className="subhead">Créneaux</h3>
-      {sortedSlots.length === 0 ? (
-        <p className="empty">Aucun créneau — ajoute déjeuner, dîner, etc.</p>
-      ) : (
-        <ul className="entity-list">
-          {sortedSlots.map((slot) => {
-            const recipe = recipeById[slot.recipeId];
-            const baseServings = recipe?.servings;
-            return (
-              <li key={slot.id} className={editingSlotId === slot.id ? 'is-editing' : undefined}>
-                <div>
-                  <strong>
-                    {formatPlanDate(slot.date)} ·{' '}
-                    {MEAL_TYPE_LABELS[slot.mealType] ?? slot.mealType}
-                  </strong>
-                  <span className="meta">
-                    {recipe?.title ?? 'Recette manquante'}
-                    {baseServings != null ? ` (recette pour ${personsLabel(baseServings)})` : ''}
-                    {slot.servingsOverride != null
-                      ? ` · ce repas pour ${personsLabel(slot.servingsOverride)}`
-                      : ''}
-                  </span>
-                </div>
-                <div className="row-actions">
-                  <button type="button" className="ghost-btn" onClick={() => beginEditSlot(slot)}>
-                    Modifier
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    onClick={() => {
-                      setSlots((prev) => prev.filter((s) => s.id !== slot.id));
-                      if (editingSlotId === slot.id) resetSlotForm();
-                    }}
-                  >
-                    Retirer
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      <div className="slot-adder stack-form">
-        <h4 className="adder-title">
-          {editingSlotId ? 'Modifier le créneau' : 'Ajouter un créneau'}
-        </h4>
-        <div className="qty-row">
-          <label>
-            Date
-            <input type="date" value={slotDate} onChange={(e) => setSlotDate(e.target.value)} />
-          </label>
-          <label>
-            Repas
-            <select value={mealType} onChange={(e) => setMealType(e.target.value as MealType)}>
-              {MEAL_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {MEAL_TYPE_LABELS[type] ?? type}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <label>
+          Type de repas
+          <select value={mealType} onChange={(e) => setMealType(e.target.value as MealType)}>
+            {PLANNING_MEAL_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {MEAL_TYPE_LABELS[type] ?? type}
+              </option>
+            ))}
+          </select>
+        </label>
         <label>
           Recette
           <select value={recipeId} onChange={(e) => setRecipeId(e.target.value)}>
@@ -289,7 +210,7 @@ export function MealPlanEditor({
           <p className="field-help">
             Recette de base : quantités pour {personsLabel(selectedRecipe.servings)}.
             {servingsOverride.trim()
-              ? ` Ce créneau sera adapté pour ${personsLabel(Number(servingsOverride) || selectedRecipe.servings)}.`
+              ? ` Ce repas sera adapté pour ${personsLabel(Number(servingsOverride) || selectedRecipe.servings)}.`
               : ' Laisse vide pour garder ces portions.'}
           </p>
         ) : null}
@@ -306,34 +227,25 @@ export function MealPlanEditor({
             onChange={(e) => setServingsOverride(e.target.value)}
           />
         </label>
-        <p className="field-help">
-          Si tu indiques un nombre, les quantités de la liste de courses seront adaptées.
-        </p>
-        <div className="editor-actions wrap">
-          <button type="button" className="primary-btn" onClick={commitSlot} disabled={!recipeId}>
-            {editingSlotId ? 'Enregistrer le créneau' : 'Ajouter le créneau'}
-          </button>
-          {editingSlotId ? (
-            <button type="button" className="ghost-btn" onClick={() => resetSlotForm(slotDate)}>
-              Annuler
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="ghost-btn"
-              onClick={() => setSlotDate(addDays(slotDate, 1))}
-            >
-              Jour suivant
-            </button>
-          )}
-        </div>
+        {plan ? (
+          <VisibilityToggle
+            entity="meal_plans"
+            id={plan._id}
+            value={plan.visibility ?? 'private'}
+          />
+        ) : null}
       </div>
 
       {error ? <p className="form-error">{error}</p> : null}
 
       <div className="editor-actions">
-        <button type="button" className="primary-btn" disabled={busy} onClick={() => void onSave()}>
-          {busy ? 'Enregistrement…' : 'Enregistrer le planning'}
+        <button
+          type="button"
+          className="primary-btn"
+          disabled={busy || !recipeId}
+          onClick={() => void onSave()}
+        >
+          {busy ? 'Enregistrement…' : isEdit ? 'Enregistrer' : 'Ajouter au planning'}
         </button>
       </div>
     </div>
