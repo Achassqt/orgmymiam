@@ -59,14 +59,16 @@ export function HouseholdPage() {
   if (isMember && household) {
     return (
       <section className="page-section page-enter screen-foyer">
+        <p className="page-back-row">
+          <Link to="/" className="back-link">
+            ← Retour
+          </Link>
+        </p>
         <div className="page-heading">
           <div>
             <h1 className="screen-title">Foyer</h1>
             <p className="lede">Partage recettes, planning et courses avec ta famille.</p>
           </div>
-          <Link to="/" className="ghost-btn">
-            Accueil
-          </Link>
         </div>
 
         <div className="household-card soft-card">

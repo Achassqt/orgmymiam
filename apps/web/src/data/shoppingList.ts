@@ -6,6 +6,7 @@ import {
   type ShoppingListItem,
 } from '@orgmymiam/shared';
 import { db, getSessionUserId } from '../db/database';
+import { shoppingListTitleFromRange } from '../lib/shoppingListShare';
 import {
   createShoppingList,
   updateShoppingList,
@@ -13,6 +14,8 @@ import {
 import { getCachedHousehold } from './household';
 import type { ProductHit } from './productSearch';
 import { categoryLabel } from './productSearch';
+
+export { shoppingListTitleFromRange };
 
 function canSee(
   row: { userId: string; visibility?: string; householdId?: string | null },
@@ -59,15 +62,46 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-/** Construit les lignes consolidées (origin meal) depuis un meal plan. */
-export async function buildMealItemsFromPlan(mealPlanId: string): Promise<ShoppingListItem[]> {
+function roundQty(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+type SlotRef = {
+  recipeId: string;
+  servingsOverride: number | null;
+  planId: string;
+};
+
+/** Slots de tous les plannings visibles dans [from, to] (inclus). */
+export async function collectSlotsInRange(
+  rangeFrom: string,
+  rangeTo: string,
+): Promise<SlotRef[]> {
   const userId = await getSessionUserId();
   const household = await getCachedHousehold();
   const householdId = household?.household._id ?? null;
-  const plan = await db.mealPlans.get(mealPlanId);
-  if (!plan || plan.deletedAt || !canSee(plan, userId, householdId)) {
-    throw new Error('Plan de repas introuvable');
+  const plans = await db.mealPlans.filter((p) => p.deletedAt == null).toArray();
+  const slots: SlotRef[] = [];
+
+  for (const plan of plans) {
+    if (!canSee(plan, userId, householdId)) continue;
+    for (const slot of plan.slots) {
+      if (slot.date < rangeFrom || slot.date > rangeTo) continue;
+      slots.push({
+        recipeId: slot.recipeId,
+        servingsOverride: slot.servingsOverride,
+        planId: plan._id,
+      });
+    }
   }
+
+  return slots;
+}
+
+async function buildMealItemsFromSlots(slots: SlotRef[]): Promise<ShoppingListItem[]> {
+  const userId = await getSessionUserId();
+  const household = await getCachedHousehold();
+  const householdId = household?.household._id ?? null;
 
   const consolidated = new Map<
     string,
@@ -81,7 +115,7 @@ export async function buildMealItemsFromPlan(mealPlanId: string): Promise<Shoppi
     }
   >();
 
-  for (const slot of plan.slots) {
+  for (const slot of slots) {
     const recipe = await db.recipes.get(slot.recipeId);
     if (!recipe || recipe.deletedAt || !canSee(recipe, userId, householdId)) continue;
 
@@ -123,14 +157,70 @@ export async function buildMealItemsFromPlan(mealPlanId: string): Promise<Shoppi
     checked: false,
     checkedAt: null,
     updatedAt: stamp,
+    note: '',
   }));
 }
 
-function roundQty(value: number): number {
-  // évite 399.999999 ; garde des décimales utiles
-  return Math.round(value * 1000) / 1000;
+/** Construit les lignes consolidées (origin meal) depuis un meal plan. */
+export async function buildMealItemsFromPlan(mealPlanId: string): Promise<ShoppingListItem[]> {
+  const userId = await getSessionUserId();
+  const household = await getCachedHousehold();
+  const householdId = household?.household._id ?? null;
+  const plan = await db.mealPlans.get(mealPlanId);
+  if (!plan || plan.deletedAt || !canSee(plan, userId, householdId)) {
+    throw new Error('Plan de repas introuvable');
+  }
+
+  return buildMealItemsFromSlots(
+    plan.slots.map((slot) => ({
+      recipeId: slot.recipeId,
+      servingsOverride: slot.servingsOverride,
+      planId: plan._id,
+    })),
+  );
 }
 
+export async function buildMealItemsFromDateRange(
+  rangeFrom: string,
+  rangeTo: string,
+): Promise<{ items: ShoppingListItem[]; mealPlanId: string | null; mealCount: number }> {
+  if (rangeFrom > rangeTo) {
+    throw new Error('La date de début doit précéder la date de fin');
+  }
+  const slots = await collectSlotsInRange(rangeFrom, rangeTo);
+  const items = await buildMealItemsFromSlots(slots);
+  const planIds = [...new Set(slots.map((s) => s.planId))];
+  return {
+    items,
+    mealPlanId: planIds.length === 1 ? planIds[0]! : null,
+    mealCount: slots.length,
+  };
+}
+
+export async function generateShoppingListFromDateRange(input: {
+  rangeFrom: string;
+  rangeTo: string;
+  notes?: string;
+}): Promise<ShoppingList> {
+  const { items, mealPlanId, mealCount } = await buildMealItemsFromDateRange(
+    input.rangeFrom,
+    input.rangeTo,
+  );
+  if (mealCount === 0) {
+    throw new Error('Aucun repas sur cette plage de dates');
+  }
+
+  return createShoppingList({
+    title: shoppingListTitleFromRange(input.rangeFrom, input.rangeTo),
+    mealPlanId,
+    rangeFrom: input.rangeFrom,
+    rangeTo: input.rangeTo,
+    notes: input.notes,
+    items,
+  });
+}
+
+/** @deprecated Préférer generateShoppingListFromDateRange. */
 export async function generateShoppingListFromMealPlan(input: {
   mealPlanId: string;
   title?: string;
@@ -142,14 +232,18 @@ export async function generateShoppingListFromMealPlan(input: {
   }
 
   const items = await buildMealItemsFromPlan(input.mealPlanId);
-  const title = input.title?.trim() || `Courses — ${plan.title}`;
+  const dates = plan.slots.map((s) => s.date).sort();
+  const rangeFrom = dates[0] ?? plan.startDate;
+  const rangeTo = dates[dates.length - 1] ?? plan.startDate;
+  const title = input.title?.trim() || shoppingListTitleFromRange(rangeFrom, rangeTo);
 
-  const list = await createShoppingList({
+  return createShoppingList({
     title,
     mealPlanId: input.mealPlanId,
+    rangeFrom,
+    rangeTo,
     items,
   });
-  return list;
 }
 
 /** Régénère les lignes meal en conservant les extras (et le cochage extras). */
@@ -159,14 +253,20 @@ export async function regenerateMealItems(listId: string): Promise<ShoppingList>
   if (!list || list.deletedAt || (userId && list.userId !== userId)) {
     throw new Error('Liste introuvable');
   }
-  if (!list.mealPlanId) {
-    throw new Error('Cette liste n’est pas liée à un plan');
+
+  let mealItems: ShoppingListItem[];
+  if (list.rangeFrom && list.rangeTo) {
+    const built = await buildMealItemsFromDateRange(list.rangeFrom, list.rangeTo);
+    mealItems = built.items;
+  } else if (list.mealPlanId) {
+    mealItems = await buildMealItemsFromPlan(list.mealPlanId);
+  } else {
+    throw new Error('Cette liste n’est pas liée à un planning');
   }
 
   const extras = list.items.filter((item) => item.origin === 'extra');
-  const mealItems = await buildMealItemsFromPlan(list.mealPlanId);
 
-  // Conserva le cochage meal si même productId+unit
+  // Conserva le cochage / note meal si même productId+unit
   const prevMeal = new Map(
     list.items
       .filter((i) => i.origin === 'meal')
@@ -175,15 +275,14 @@ export async function regenerateMealItems(listId: string): Promise<ShoppingList>
 
   const mergedMeal = mealItems.map((item) => {
     const prev = prevMeal.get(itemKey(item.productId, item.productSource, item.unit));
-    if (prev?.checked) {
-      return {
-        ...item,
-        checked: true,
-        checkedAt: prev.checkedAt,
-        updatedAt: nowIso(),
-      };
-    }
-    return item;
+    if (!prev) return item;
+    return {
+      ...item,
+      note: prev.note ?? '',
+      checked: prev.checked,
+      checkedAt: prev.checked ? prev.checkedAt : null,
+      updatedAt: nowIso(),
+    };
   });
 
   return updateShoppingList(listId, {
@@ -213,10 +312,16 @@ export function groupItemsByCategory(items: ShoppingListItem[]): Array<{
   }));
 }
 
+/** Ordre d’affichage = ordre manuel du tableau (réordonnancement). */
+export function orderedShoppingItems(items: ShoppingListItem[]): ShoppingListItem[] {
+  return items;
+}
+
 export async function buildExtraItemFromHit(
   hit: ProductHit,
   quantity: number,
   unit?: string,
+  note = '',
 ): Promise<ShoppingListItem> {
   const qty = quantity > 0 ? quantity : 1;
   const productId = hit.source === 'catalog' ? hit.catalogId : hit.userProductId;
@@ -236,5 +341,6 @@ export async function buildExtraItemFromHit(
     checked: false,
     checkedAt: null,
     updatedAt: stamp,
+    note: note.trim(),
   };
 }

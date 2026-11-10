@@ -67,7 +67,7 @@ export function LoginPage() {
             />
           </label>
           {error ? <p className="form-error">{error}</p> : null}
-          <button type="submit" className="primary-btn bounce-press" disabled={submitting}>
+          <button type="submit" className="primary-btn" disabled={submitting}>
             {submitting ? 'Connexion…' : 'Se connecter'}
           </button>
         </form>

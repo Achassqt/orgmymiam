@@ -3,12 +3,11 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useAuth } from '../auth/AuthProvider';
 import { EmptyState } from '../components/EmptyState';
+import { TrashIcon } from '../components/icons';
 import { ProductSearchBox } from '../components/ProductSearchBox';
-import { UnitSelect } from '../components/UnitSelect';
 import { adoptCatalogProduct, createProduct, softDeleteProduct } from '../data/crud';
-import { categoryLabel, type ProductHit } from '../data/productSearch';
+import type { ProductHit } from '../data/productSearch';
 import { db } from '../db/database';
-import { unitDisplayLabel } from '../lib/units';
 
 export function ProductsPage() {
   const { session } = useAuth();
@@ -27,7 +26,6 @@ export function ProductsPage() {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
-  const [defaultUnit, setDefaultUnit] = useState('unité');
 
   const filteredMine = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -41,15 +39,13 @@ export function ProductsPage() {
     setBusy(true);
     setFeedback(null);
     try {
-      const result = await createProduct({ name, defaultUnit });
+      const result = await createProduct({ name });
       if (result.status === 'reused_user') {
         setFeedback(`Déjà dans ta liste : « ${result.product.name} ».`);
       } else if (result.status === 'reused_catalog') {
         setFeedback(`Ajouté à tes produits : « ${result.product.name} ».`);
       } else {
-        setFeedback(
-          `Produit créé : « ${result.product.name} » (${unitDisplayLabel(result.product.defaultUnit)}).`,
-        );
+        setFeedback(`Produit créé : « ${result.product.name} ».`);
       }
     } finally {
       setBusy(false);
@@ -79,22 +75,25 @@ export function ProductsPage() {
 
   return (
     <section className="page-section page-enter screen-produits">
+      <p className="page-back-row">
+        <Link className="back-link" to="/recettes">
+          ← Retour
+        </Link>
+      </p>
       <div className="page-heading">
         <div>
           <h1 className="screen-title">Produits</h1>
           <p className="lede">Catalogue perso — aussi accessible depuis les recettes.</p>
         </div>
-        <Link className="ghost-btn" to="/recettes">
-          ← Recettes
-        </Link>
       </div>
 
       <div className="product-create-unit soft-card product-tools">
-        <label>
-          Unité par défaut (nouveaux produits)
-          <UnitSelect value={defaultUnit} onChange={setDefaultUnit} />
-        </label>
-        <ProductSearchBox busy={busy} onCreate={handleCreate} onSelect={handleSelect} />
+        <ProductSearchBox
+          busy={busy}
+          hideHitMeta
+          onCreate={handleCreate}
+          onSelect={handleSelect}
+        />
         {feedback ? <p className="search-notice">{feedback}</p> : null}
       </div>
 
@@ -115,7 +114,7 @@ export function ProductsPage() {
             title="Aucun produit encore"
             description="Cherche ci-dessus, ou ajoute des ingrédients depuis une recette."
             action={
-              <Link className="primary-btn bounce-press" to="/recettes">
+              <Link className="primary-btn" to="/recettes">
                 Aller aux recettes
               </Link>
             }
@@ -130,16 +129,18 @@ export function ProductsPage() {
               <span className="product-dot" aria-hidden />
               <div className="product-card-body">
                 <strong>{product.name}</strong>
-                <span className="meta">
-                  {categoryLabel(product.category)} · {unitDisplayLabel(product.defaultUnit)}
-                </span>
               </div>
               <button
                 type="button"
-                className="ghost-btn"
-                onClick={() => void softDeleteProduct(product._id)}
+                className="icon-btn soft"
+                aria-label={`Supprimer ${product.name}`}
+                title="Supprimer"
+                onClick={() => {
+                  if (!window.confirm(`Supprimer « ${product.name} » ?`)) return;
+                  void softDeleteProduct(product._id);
+                }}
               >
-                Suppr.
+                <TrashIcon />
               </button>
             </li>
           ))}

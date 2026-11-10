@@ -193,21 +193,3 @@ export function IlloChef({ className }: IlloProps) {
   );
 }
 
-export function DecorDots({ className }: IlloProps) {
-  return (
-    <svg className={className} viewBox="0 0 120 40" fill="none" aria-hidden>
-      <circle cx="10" cy="20" r="3" fill="currentColor" />
-      <circle cx="28" cy="12" r="2" fill="currentColor" />
-      <circle cx="46" cy="24" r="2.5" fill="currentColor" />
-      <path
-        d="M62 10c8 4 10 14 20 12"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <circle cx="98" cy="18" r="3" fill="currentColor" />
-      <circle cx="112" cy="28" r="2" fill="currentColor" />
-    </svg>
-  );
-}

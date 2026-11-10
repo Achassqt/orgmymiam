@@ -23,9 +23,20 @@ export function mergeShoppingListLww(local: ShoppingList, server: ShoppingList):
   }
 
   const listWinner = isAtLeastAsNew(local.updatedAt, server.updatedAt) ? local : server;
-  const items = [...byId.values()].sort((a, b) =>
-    a.nameSnapshot.localeCompare(b.nameSnapshot, 'fr'),
-  );
+  // Préserver l’ordre manuel de la liste gagnante (réordonnancement Courses).
+  const ordered: ShoppingListItem[] = [];
+  const seen = new Set<string>();
+  for (const row of listWinner.items) {
+    const merged = byId.get(row.id);
+    if (merged) {
+      ordered.push(merged);
+      seen.add(row.id);
+    }
+  }
+  for (const item of byId.values()) {
+    if (!seen.has(item.id)) ordered.push(item);
+  }
+  const items = ordered;
 
   const serverById = new Map(server.items.map((i) => [i.id, i]));
   const itemsDiverge = items.some((item) => {

@@ -138,6 +138,8 @@ export interface ShoppingListItem {
   checked: boolean;
   checkedAt: IsoDateTime | null;
   updatedAt: IsoDateTime;
+  /** Note libre par produit (ex. marque, rayon). */
+  note: string;
   /** Réservé multi-user (MVP : propriétaire) */
   updatedBy?: string;
 }
@@ -145,6 +147,11 @@ export interface ShoppingListItem {
 export interface ShoppingList extends UserOwned, SyncMeta, HouseholdShare {
   title: string;
   mealPlanId: string | null;
+  /** Plage de dates utilisée pour la génération depuis le planning. */
+  rangeFrom: IsoDate | null;
+  rangeTo: IsoDate | null;
+  /** Note facultative sur la liste. */
+  notes: string;
   status: ShoppingListStatus;
   items: ShoppingListItem[];
   /** Aligné sur les membres du foyer si visibility === 'household'. */

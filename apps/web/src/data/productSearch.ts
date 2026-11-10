@@ -175,5 +175,5 @@ export const MEAL_TYPE_LABELS: Record<string, string> = {
   petit_dejeuner: 'Petit-déj',
   dejeuner: 'Déjeuner',
   diner: 'Dîner',
-  collation: 'Collation',
+  collation: 'Goûter',
 };

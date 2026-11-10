@@ -125,6 +125,7 @@ export const shoppingListItemSchema = z.object({
   checked: z.boolean(),
   checkedAt: isoDateTimeSchema.nullable(),
   updatedAt: isoDateTimeSchema,
+  note: z.string().max(500).default(''),
   updatedBy: uuidSchema.optional(),
 });
 
@@ -134,6 +135,9 @@ export const shoppingListSchema = z
     userId: uuidSchema,
     title: z.string().min(1).max(200),
     mealPlanId: uuidSchema.nullable(),
+    rangeFrom: isoDateSchema.nullable().default(null),
+    rangeTo: isoDateSchema.nullable().default(null),
+    notes: z.string().max(2000).default(''),
     status: shoppingListStatusSchema,
     items: z.array(shoppingListItemSchema),
     memberIds: z.array(uuidSchema).min(1).max(8),

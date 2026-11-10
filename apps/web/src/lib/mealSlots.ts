@@ -53,3 +53,35 @@ export function upsertMealSlot(
     },
   ];
 }
+
+/**
+ * Un repas par jour + type : remplace tout créneau existant pour cette paire
+ * (conservé l’id si on édite ou s’il en existe déjà un).
+ */
+export function replaceMealSlotForDayType(
+  slots: MealSlot[],
+  next: Omit<MealSlot, 'id'> & { id?: string },
+  editingSlotId: string | null = null,
+): MealSlot[] {
+  const kept = slots.filter((s) => {
+    if (editingSlotId != null && s.id === editingSlotId) return false;
+    if (s.date === next.date && s.mealType === next.mealType) return false;
+    return true;
+  });
+
+  const sameDayTypeId = slots.find(
+    (s) => s.date === next.date && s.mealType === next.mealType,
+  )?.id;
+  const reusedId = editingSlotId ?? sameDayTypeId ?? next.id ?? crypto.randomUUID();
+
+  return [
+    ...kept,
+    {
+      id: reusedId,
+      date: next.date,
+      mealType: next.mealType,
+      recipeId: next.recipeId,
+      servingsOverride: next.servingsOverride,
+    },
+  ];
+}

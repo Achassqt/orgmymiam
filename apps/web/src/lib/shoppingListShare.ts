@@ -1,22 +1,30 @@
 import type { ShoppingListItem } from '@orgmymiam/shared';
-import { groupItemsByCategory } from '../data/shoppingList';
+import { formatPlanDate } from './planDates';
 import { formatQuantity } from './units';
 
-/** Texte checklist lisible, groupé par catégorie, pour partage / presse-papiers. */
+export function shoppingListTitleFromRange(rangeFrom: string, rangeTo: string): string {
+  if (rangeFrom === rangeTo) {
+    return `Courses — ${formatPlanDate(rangeFrom)}`;
+  }
+  return `Courses — ${formatPlanDate(rangeFrom)} → ${formatPlanDate(rangeTo)}`;
+}
+
+/** Texte checklist plat (sans catégories) pour partage / presse-papiers. */
 export function formatShoppingListShareText(
   title: string,
   items: ShoppingListItem[],
+  notes?: string | null,
 ): string {
-  const groups = groupItemsByCategory(items);
-  const lines: string[] = [title, ''];
+  const lines: string[] = [title];
+  if (notes?.trim()) {
+    lines.push(notes.trim());
+  }
+  lines.push('');
 
-  for (const group of groups) {
-    lines.push(group.label);
-    for (const item of group.items) {
-      const box = item.checked ? '[x]' : '[ ]';
-      lines.push(`${box} ${item.nameSnapshot} — ${formatQuantity(item.quantity, item.unit)}`);
-    }
-    lines.push('');
+  for (const item of items) {
+    const box = item.checked ? '[x]' : '[ ]';
+    const note = item.note?.trim() ? ` — ${item.note.trim()}` : '';
+    lines.push(`${box} ${item.nameSnapshot} — ${formatQuantity(item.quantity, item.unit)}${note}`);
   }
 
   return lines.join('\n').trimEnd();

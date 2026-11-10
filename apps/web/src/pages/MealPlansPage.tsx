@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useSearchParams } from 'react-router-dom';
 import type { MealType } from '@orgmymiam/shared';
@@ -14,6 +14,7 @@ import {
   addDaysIso,
   formatMinutes,
   formatWeekSubtitle,
+  mealTypeOrder,
   pickDishIllo,
   recipeMinutes,
   weekDayStrip,
@@ -74,22 +75,34 @@ type PlanMeal = {
   planVisibility: 'private' | 'household';
 };
 
+function defaultSelectedDate(weekDates: string[], today: string): string {
+  if (weekDates.includes(today)) return today;
+  return weekDates[0] ?? today;
+}
+
 export function MealPlansPage() {
   const { session } = useAuth();
   const userId = session?.user._id;
   const today = todayIsoDate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [weekAnchor, setWeekAnchor] = useState(today);
+  const [selectedDate, setSelectedDate] = useState(today);
   const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [seedSlot, setSeedSlot] = useState<{ date: string; mealType: MealType } | null>(
     null,
   );
-  const dayRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const days = useMemo(() => weekDayStrip(weekAnchor, today), [weekAnchor, today]);
-  const weekDates = useMemo(() => new Set(days.map((d) => d.date)), [days]);
+  const weekDates = useMemo(() => days.map((d) => d.date), [days]);
+  const weekDateSet = useMemo(() => new Set(weekDates), [weekDates]);
   const weekSubtitle = useMemo(() => formatWeekSubtitle(weekAnchor), [weekAnchor]);
+
+  useEffect(() => {
+    setSelectedDate((prev) =>
+      weekDateSet.has(prev) ? prev : defaultSelectedDate(weekDates, today),
+    );
+  }, [weekDateSet, weekDates, today]);
 
   const plans =
     useLiveQuery(
@@ -112,7 +125,7 @@ export function MealPlansPage() {
     return allPlans
       .flatMap((plan) =>
         plan.slots
-          .filter((slot) => weekDates.has(slot.date))
+          .filter((slot) => weekDateSet.has(slot.date))
           .map((slot) => {
             const recipe = recipeById[slot.recipeId];
             return {
@@ -129,23 +142,35 @@ export function MealPlansPage() {
       )
       .sort((a, b) =>
         a.date === b.date
-          ? a.mealType.localeCompare(b.mealType)
+          ? mealTypeOrder(a.mealType) - mealTypeOrder(b.mealType)
           : a.date.localeCompare(b.date),
       );
-  }, [userId, weekAnchor, days.map((d) => d.date).join('|')]);
+  }, [userId, weekDates.join('|')]);
 
   const selected = plans.find((p) => p._id === selectedId) ?? null;
   const meals = weekMeals ?? [];
+  const selectedDay = days.find((d) => d.date === selectedDate) ?? days[0];
 
   useEffect(() => {
     const editId = searchParams.get('edit');
     if (!editId) return;
-    if (plans.some((p) => p._id === editId)) {
-      setSelectedId(editId);
-      setMode('edit');
-      setSeedSlot(null);
+    if (mode !== 'list' && selectedId === editId) return;
+    const plan = plans.find((p) => p._id === editId);
+    if (!plan) return;
+    setSelectedId(plan._id);
+    setMode('edit');
+    const slot =
+      plan.slots.find((s) => s.date === today) ??
+      plan.slots.find((s) => weekDateSet.has(s.date)) ??
+      plan.slots[0];
+    if (slot) {
+      setSeedSlot({ date: slot.date, mealType: slot.mealType });
+      setWeekAnchor(slot.date);
+      setSelectedDate(slot.date);
+    } else {
+      setSeedSlot({ date: today, mealType: 'dejeuner' });
     }
-  }, [searchParams, plans]);
+  }, [searchParams, plans, today, weekDateSet, mode, selectedId]);
 
   function closeEditor() {
     setMode('list');
@@ -158,9 +183,9 @@ export function MealPlansPage() {
     }
   }
 
-  function openEditPlan(planId: string) {
-    setSeedSlot(null);
-    setSelectedId(planId);
+  function openEditMeal(meal: PlanMeal) {
+    setSeedSlot({ date: meal.date, mealType: meal.mealType as MealType });
+    setSelectedId(meal.planId);
     setMode('edit');
   }
 
@@ -169,7 +194,7 @@ export function MealPlansPage() {
     setSeedSlot(seed);
 
     const planWithDay = plans.find((p) => p.slots.some((s) => s.date === date));
-    const planInWeek = plans.find((p) => p.slots.some((s) => weekDates.has(s.date)));
+    const planInWeek = plans.find((p) => p.slots.some((s) => weekDateSet.has(s.date)));
     const target = planWithDay ?? planInWeek ?? plans[0] ?? null;
 
     if (target) {
@@ -185,15 +210,14 @@ export function MealPlansPage() {
     return meals.find((m) => m.date === date && m.mealType === mealType) ?? null;
   }
 
-  function mealDots(date: string): [boolean, boolean] {
-    return [
-      meals.some((m) => m.date === date && m.mealType === 'dejeuner'),
-      meals.some((m) => m.date === date && m.mealType === 'diner'),
-    ];
+  function mealDots(date: string): boolean[] {
+    return PLANNING_MEAL_TYPES.map((type) =>
+      meals.some((m) => m.date === date && m.mealType === type),
+    );
   }
 
-  function scrollToDay(date: string) {
-    dayRefs.current[date]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  function shiftWeek(deltaDays: number) {
+    setWeekAnchor((a) => addDaysIso(a, deltaDays));
   }
 
   if (mode === 'create' || (mode === 'edit' && selected)) {
@@ -222,7 +246,7 @@ export function MealPlansPage() {
               type="button"
               className="planning-week-btn"
               aria-label="Semaine précédente"
-              onClick={() => setWeekAnchor((a) => addDaysIso(a, -7))}
+              onClick={() => shiftWeek(-7)}
             >
               <IconChevron dir="left" />
             </button>
@@ -230,7 +254,7 @@ export function MealPlansPage() {
               type="button"
               className="planning-week-btn"
               aria-label="Semaine suivante"
-              onClick={() => setWeekAnchor((a) => addDaysIso(a, 7))}
+              onClick={() => shiftWeek(7)}
             >
               <IconChevron dir="right" />
             </button>
@@ -239,23 +263,29 @@ export function MealPlansPage() {
 
         <div className="planning-week-strip" role="tablist" aria-label="Jours de la semaine">
           {days.map((day) => {
-            const [lunch, dinner] = mealDots(day.date);
+            const active = day.date === selectedDate;
+            const dots = mealDots(day.date);
             return (
               <button
                 key={day.date}
                 type="button"
                 role="tab"
-                aria-selected={day.isToday}
+                aria-selected={active}
                 className={
-                  day.isToday ? 'planning-week-day is-today' : 'planning-week-day'
+                  active
+                    ? 'planning-week-day is-active'
+                    : day.isToday
+                      ? 'planning-week-day is-today'
+                      : 'planning-week-day'
                 }
-                onClick={() => scrollToDay(day.date)}
+                onClick={() => setSelectedDate(day.date)}
               >
                 <span className="planning-week-label">{day.label}</span>
                 <span className="planning-week-num">{day.dayNum}</span>
                 <span className="planning-week-dots" aria-hidden>
-                  <span className={lunch ? 'is-filled' : undefined} />
-                  <span className={dinner ? 'is-filled' : undefined} />
+                  {dots.map((filled, i) => (
+                    <span key={PLANNING_MEAL_TYPES[i]} className={filled ? 'is-filled' : undefined} />
+                  ))}
                 </span>
               </button>
             );
@@ -264,88 +294,78 @@ export function MealPlansPage() {
 
         {!weekMeals ? (
           <p className="empty">Chargement…</p>
-        ) : (
-          <div className="planning-days">
-            {days.map((day) => (
-              <article
-                key={day.date}
-                className="planning-day-card"
-                ref={(el) => {
-                  dayRefs.current[day.date] = el;
-                }}
-                aria-labelledby={`planning-day-${day.date}`}
-              >
-                <header className="planning-day-header">
-                  <h2 id={`planning-day-${day.date}`} className="planning-day-title">
-                    {day.fullLabel}
-                  </h2>
-                  {day.isToday ? (
-                    <span className="planning-today-badge">Aujourd&apos;hui</span>
-                  ) : null}
-                </header>
+        ) : selectedDay ? (
+          <article
+            className="planning-day-card"
+            aria-labelledby={`planning-day-${selectedDay.date}`}
+          >
+            <header className="planning-day-header">
+              <h2 id={`planning-day-${selectedDay.date}`} className="planning-day-title">
+                {selectedDay.fullLabel}
+              </h2>
+              {selectedDay.isToday ? (
+                <span className="planning-today-badge">Aujourd&apos;hui</span>
+              ) : null}
+            </header>
 
-                <ul className="planning-slots">
-                  {PLANNING_MEAL_TYPES.map((mealType) => {
-                    const meal = mealFor(day.date, mealType);
-                    const label = MEAL_TYPE_LABELS[mealType] ?? mealType;
-                    if (meal) {
-                      const dish = pickDishIllo(meal.recipeTitle);
-                      const mins = recipeMinutes(meal.recipeTitle, meal.recipeNotes);
-                      return (
-                        <li key={mealType}>
-                          <button
-                            type="button"
-                            className="planning-slot"
-                            onClick={() => openEditPlan(meal.planId)}
-                          >
-                            <span
-                              className="planning-slot-thumb"
-                              style={{ background: DISH_PASTEL[dish] }}
-                              aria-hidden
-                            >
-                              <DishIllo
-                                dish={dish}
-                                className="planning-slot-illo"
-                                alt=""
-                              />
-                            </span>
-                            <span className="planning-slot-body">
-                              <span className="planning-slot-meal">{label}</span>
-                              <span className="planning-slot-name">
-                                {meal.recipeTitle}{' '}
-                                <HouseholdBadge visibility={meal.planVisibility} />
-                              </span>
-                            </span>
-                            {mins != null ? (
-                              <span className="planning-slot-time">
-                                <IconClock />
-                                {formatMinutes(mins)}
-                              </span>
-                            ) : (
-                              <span className="planning-slot-time planning-slot-time-empty" />
-                            )}
-                          </button>
-                        </li>
-                      );
-                    }
-
-                    return (
-                      <li key={mealType}>
-                        <button
-                          type="button"
-                          className="planning-slot-empty"
-                          onClick={() => openAddSlot(day.date, mealType)}
+            <ul className="planning-slots">
+              {PLANNING_MEAL_TYPES.map((mealType) => {
+                const meal = mealFor(selectedDay.date, mealType);
+                const label = MEAL_TYPE_LABELS[mealType] ?? mealType;
+                if (meal) {
+                  const dish = pickDishIllo(meal.recipeTitle);
+                  const mins = recipeMinutes(meal.recipeTitle, meal.recipeNotes);
+                  return (
+                    <li key={mealType}>
+                      <button
+                        type="button"
+                        className="planning-slot"
+                        onClick={() => openEditMeal(meal)}
+                      >
+                        <span
+                          className="planning-slot-thumb"
+                          style={{ background: DISH_PASTEL[dish] }}
+                          aria-hidden
                         >
-                          <IconPlus />
-                          <span>Ajouter un {label.toLowerCase()}</span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </article>
-            ))}
-          </div>
+                          <DishIllo dish={dish} className="planning-slot-illo" alt="" />
+                        </span>
+                        <span className="planning-slot-body">
+                          <span className="planning-slot-meal">{label}</span>
+                          <span className="planning-slot-name">
+                            {meal.recipeTitle}{' '}
+                            <HouseholdBadge visibility={meal.planVisibility} />
+                          </span>
+                        </span>
+                        {mins != null ? (
+                          <span className="planning-slot-time">
+                            <IconClock />
+                            {formatMinutes(mins)}
+                          </span>
+                        ) : (
+                          <span className="planning-slot-time planning-slot-time-empty" />
+                        )}
+                      </button>
+                    </li>
+                  );
+                }
+
+                return (
+                  <li key={mealType}>
+                    <button
+                      type="button"
+                      className="planning-slot-empty"
+                      onClick={() => openAddSlot(selectedDay.date, mealType)}
+                    >
+                      <IconPlus />
+                      <span>Ajouter un {label.toLowerCase()}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </article>
+        ) : (
+          <p className="empty">Aucun jour sélectionné.</p>
         )}
       </section>
     </PullToRefresh>

@@ -8,8 +8,15 @@ import { PullToRefresh } from '../components/PullToRefresh';
 import { ShoppingListDetail } from '../components/ShoppingListDetail';
 import { HouseholdBadge } from '../components/VisibilityToggle';
 import { createShoppingList, softDeleteShoppingList } from '../data/crud';
-import { generateShoppingListFromMealPlan } from '../data/shoppingList';
+import { generateShoppingListFromDateRange } from '../data/shoppingList';
 import { db } from '../db/database';
+import { addDaysIso } from '../lib/homeHub';
+import { todayIsoDate } from '../lib/planDates';
+
+function defaultRange(): { from: string; to: string } {
+  const from = todayIsoDate();
+  return { from, to: addDaysIso(from, 14) };
+}
 
 export function ShoppingListPage() {
   const { session } = useAuth();
@@ -37,37 +44,13 @@ export function ShoppingListPage() {
       [userId],
     ) ?? [];
 
+  const initialRange = useMemo(() => defaultRange(), []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [mealPlanId, setMealPlanId] = useState('');
-  const [title, setTitle] = useState('');
+  const [rangeFrom, setRangeFrom] = useState(initialRange.from);
+  const [rangeTo, setRangeTo] = useState(initialRange.to);
+  const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const selectedPlan = useMemo(
-    () => plans.find((p) => p._id === mealPlanId) ?? null,
-    [plans, mealPlanId],
-  );
-
-  const portionsPreview = useMemo(() => {
-    if (!selectedPlan) return null;
-    const mealCount = selectedPlan.slots.length;
-    const overrides = selectedPlan.slots
-      .map((s) => s.servingsOverride)
-      .filter((n): n is number => n != null && n > 0);
-    const unique = [...new Set(overrides)];
-    let servingsText: string;
-    if (unique.length === 1) {
-      servingsText = `pour ${unique[0]} personne${unique[0] === 1 ? '' : 's'}`;
-    } else if (unique.length > 1) {
-      servingsText = 'selon les portions de chaque repas';
-    } else {
-      servingsText = 'selon les portions de chaque recette';
-    }
-    return {
-      mealCount,
-      summary: `${mealCount} repas · quantités ${servingsText}.`,
-    };
-  }, [selectedPlan]);
 
   if (selectedId) {
     return (
@@ -78,18 +61,23 @@ export function ShoppingListPage() {
   }
 
   async function onGenerate() {
-    if (!mealPlanId) {
-      setError('Choisis un planning');
+    if (!rangeFrom || !rangeTo) {
+      setError('Choisis une plage de dates');
+      return;
+    }
+    if (rangeFrom > rangeTo) {
+      setError('La date de début doit précéder la date de fin');
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      const list = await generateShoppingListFromMealPlan({
-        mealPlanId,
-        title: title.trim() || undefined,
+      const list = await generateShoppingListFromDateRange({
+        rangeFrom,
+        rangeTo,
+        notes: notes.trim() || undefined,
       });
-      setTitle('');
+      setNotes('');
       setSelectedId(list._id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Génération impossible');
@@ -103,9 +91,10 @@ export function ShoppingListPage() {
     setError(null);
     try {
       const list = await createShoppingList({
-        title: title.trim() || 'Courses',
+        title: 'Courses',
+        notes: notes.trim() || undefined,
       });
-      setTitle('');
+      setNotes('');
       setSelectedId(list._id);
     } finally {
       setBusy(false);
@@ -120,7 +109,7 @@ export function ShoppingListPage() {
         <div className="page-heading">
           <div>
             <h1 className="screen-title">Courses</h1>
-            <p className="lede">Génère depuis un planning, coche au fur et à mesure.</p>
+            <p className="lede">Génère depuis le planning, coche au fur et à mesure.</p>
           </div>
         </div>
 
@@ -130,7 +119,7 @@ export function ShoppingListPage() {
             title="Pas encore de liste"
             description="Crée d’abord un planning avec des recettes, puis reviens générer tes courses."
             action={
-              <Link className="primary-btn bounce-press" to="/plans">
+              <Link className="primary-btn" to="/plans">
                 Aller au planning
               </Link>
             }
@@ -138,35 +127,42 @@ export function ShoppingListPage() {
         ) : (
           <div className="stack-form generate-box soft-card">
             <h2 className="subhead generate-box-title">Nouvelle liste</h2>
+            <div className="date-range-row">
+              <label>
+                Du
+                <input
+                  type="date"
+                  value={rangeFrom}
+                  onChange={(e) => setRangeFrom(e.target.value)}
+                  disabled={busy}
+                />
+              </label>
+              <label>
+                Au
+                <input
+                  type="date"
+                  value={rangeTo}
+                  min={rangeFrom}
+                  onChange={(e) => setRangeTo(e.target.value)}
+                  disabled={busy}
+                />
+              </label>
+            </div>
             <label>
-              Depuis un planning
-              <select value={mealPlanId} onChange={(e) => setMealPlanId(e.target.value)}>
-                <option value="">Choisir…</option>
-                {plans.map((plan) => (
-                  <option key={plan._id} value={plan._id}>
-                    {plan.title} ({plan.slots.length} repas)
-                  </option>
-                ))}
-              </select>
-            </label>
-            {portionsPreview ? (
-              <p className="portions-banner" role="status">
-                {portionsPreview.summary}
-              </p>
-            ) : null}
-            <label>
-              Titre (optionnel)
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Courses semaine…"
+              Note (facultatif)
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Ex. courses du week-end, budget serré…"
+                rows={2}
+                disabled={busy}
               />
             </label>
             <div className="editor-actions wrap">
               <button
                 type="button"
-                className="primary-btn bounce-press"
-                disabled={busy || !mealPlanId}
+                className="primary-btn"
+                disabled={busy || !rangeFrom || !rangeTo}
                 onClick={() => void onGenerate()}
               >
                 Générer la liste
@@ -217,6 +213,9 @@ export function ShoppingListPage() {
                             ? ` · ${list.memberIds.length} membre${list.memberIds.length === 1 ? '' : 's'}`
                             : ''}
                         </span>
+                        {list.notes ? (
+                          <span className="shop-hub-note meta">{list.notes}</span>
+                        ) : null}
                         <span className="shop-hub-progress" aria-hidden>
                           <span className="shop-hub-progress-bar" style={{ width: `${pct}%` }} />
                         </span>

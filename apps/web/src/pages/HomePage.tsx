@@ -11,7 +11,10 @@ import { db } from '../db/database';
 import { useHousehold } from '../hooks/useHousehold';
 import {
   formatMinutes,
+  mealTypeOrder,
+  nextMealBadgeLabel,
   pickDishIllo,
+  pickNextMealByTime,
   recipeMinutes,
   weekDayStrip,
   weekTileBadge,
@@ -165,7 +168,7 @@ export function HomePage() {
       )
       .sort((a, b) =>
         a.date === b.date
-          ? a.mealType.localeCompare(b.mealType)
+          ? mealTypeOrder(a.mealType) - mealTypeOrder(b.mealType)
           : a.date.localeCompare(b.date),
       );
 
@@ -179,52 +182,45 @@ export function HomePage() {
   const progress = total > 0 ? Math.round((checked / total) * 100) : 0;
 
   const meals = weekMeals ?? [];
-  const selectedMeals = meals.filter((m) => m.date === selectedDate);
-  const tonight =
-    selectedMeals.find((m) => m.mealType === 'diner') ?? selectedMeals[0] ?? null;
+  const nextMeal = pickNextMealByTime(meals);
+  const selectedMeals = meals
+    .filter((m) => m.date === selectedDate)
+    .sort((a, b) => mealTypeOrder(a.mealType) - mealTypeOrder(b.mealType));
 
-  const weekTiles = meals
-    .filter((m) => !(tonight && m.slotId === tonight.slotId))
-    .slice(0, 6);
-
-  const tonightDish = tonight ? pickDishIllo(tonight.recipeTitle) : null;
-  const tonightMins = tonight
-    ? recipeMinutes(tonight.recipeTitle, tonight.recipeNotes)
+  const nextDish = nextMeal ? pickDishIllo(nextMeal.recipeTitle) : null;
+  const nextMins = nextMeal
+    ? recipeMinutes(nextMeal.recipeTitle, nextMeal.recipeNotes)
     : null;
-  const mealLabel = tonight
-    ? (MEAL_TYPE_LABELS[tonight.mealType] ?? tonight.mealType)
-    : '';
-  const ceSoirBadge =
-    selectedDate === today ? `Ce soir · ${mealLabel}` : `${mealLabel || 'Repas'}`;
+  const nextBadge = nextMeal ? nextMealBadgeLabel(nextMeal, today) : '';
 
   return (
     <PullToRefresh>
       <section className="page-section home-accueil page-enter">
         {!weekMeals ? (
           <p className="empty">Chargement…</p>
-        ) : tonight && tonightDish ? (
+        ) : nextMeal && nextDish ? (
           <Link
             className="home-tonight"
-            to={`/plans?edit=${tonight.planId}`}
+            to={`/plans?edit=${nextMeal.planId}`}
             aria-labelledby="tonight-title"
           >
             <DishIllo
-              dish={tonightDish}
+              dish={nextDish}
               className="home-tonight-illo"
               alt=""
             />
-            <span className="home-tonight-badge">{ceSoirBadge}</span>
+            <span className="home-tonight-badge">{nextBadge}</span>
             <strong id="tonight-title" className="home-tonight-title">
-              {tonight.recipeTitle}{' '}
-              <HouseholdBadge visibility={tonight.planVisibility} />
+              {nextMeal.recipeTitle}{' '}
+              <HouseholdBadge visibility={nextMeal.planVisibility} />
             </strong>
-            {tonightMins != null ? (
+            {nextMins != null ? (
               <span className="home-tonight-time">
                 <IconClock size={16} color="#1F3D2B" />
-                {formatMinutes(tonightMins)}
+                {formatMinutes(nextMins)}
               </span>
-            ) : tonight.servingsOverride != null ? (
-              <span className="home-tonight-time">{tonight.servingsOverride} pers.</span>
+            ) : nextMeal.servingsOverride != null ? (
+              <span className="home-tonight-time">{nextMeal.servingsOverride} pers.</span>
             ) : (
               <span className="home-tonight-time home-tonight-time-spacer" aria-hidden />
             )}
@@ -237,7 +233,7 @@ export function HomePage() {
               description={
                 recipesCount === 0
                   ? 'Commence par une recette, puis place-la dans le planning.'
-                  : 'Ajoute un créneau pour voir le plat du jour ici.'
+                  : 'Ajoute un créneau pour voir le prochain repas ici.'
               }
               action={
                 <Link className="primary-btn" to={recipesCount === 0 ? '/recettes' : '/plans'}>
@@ -247,25 +243,6 @@ export function HomePage() {
             />
           </div>
         )}
-
-        <div className="home-week-strip" role="tablist" aria-label="Jours de la semaine">
-          {days.map((day) => {
-            const active = day.date === selectedDate;
-            return (
-              <button
-                key={day.date}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                className={active ? 'home-week-day is-active' : 'home-week-day'}
-                onClick={() => setSelectedDate(day.date)}
-              >
-                <span className="home-week-label">{day.label}</span>
-                <span className="home-week-num">{day.dayNum}</span>
-              </button>
-            );
-          })}
-        </div>
 
         <section className="home-week-section" aria-labelledby="week-heading">
           <div className="home-section-head">
@@ -278,9 +255,28 @@ export function HomePage() {
             </Link>
           </div>
 
-          {weekTiles.length > 0 ? (
+          <div className="home-week-strip" role="tablist" aria-label="Jours de la semaine">
+            {days.map((day) => {
+              const active = day.date === selectedDate;
+              return (
+                <button
+                  key={day.date}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={active ? 'home-week-day is-active' : 'home-week-day'}
+                  onClick={() => setSelectedDate(day.date)}
+                >
+                  <span className="home-week-label">{day.label}</span>
+                  <span className="home-week-num">{day.dayNum}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedMeals.length > 0 ? (
             <ul className="home-week-tiles">
-              {weekTiles.map((meal) => {
+              {selectedMeals.map((meal) => {
                 const dish = pickDishIllo(meal.recipeTitle);
                 const mins = recipeMinutes(meal.recipeTitle, meal.recipeNotes);
                 const badge = weekTileBadge(dish);
@@ -322,7 +318,7 @@ export function HomePage() {
             </ul>
           ) : (
             <p className="home-week-empty">
-              Pas encore d’autres repas cette semaine.{' '}
+              Pas encore de repas ce jour.{' '}
               <Link to="/plans">Ouvrir le planning</Link>
             </p>
           )}

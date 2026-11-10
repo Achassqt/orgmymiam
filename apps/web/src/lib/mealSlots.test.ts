@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { MealSlot } from '@orgmymiam/shared';
-import { mealSlotKey, upsertMealSlot } from './mealSlots.js';
+import { mealSlotKey, replaceMealSlotForDayType, upsertMealSlot } from './mealSlots.js';
 
 function slot(
   partial: Partial<MealSlot> & Pick<MealSlot, 'id' | 'date' | 'mealType' | 'recipeId'>,
@@ -89,5 +89,35 @@ describe('upsertMealSlot', () => {
     assert.equal(next[0]?.id, 'a');
     assert.equal(next[0]?.date, '2026-11-11');
     assert.equal(next[0]?.mealType, 'dejeuner');
+  });
+});
+
+describe('replaceMealSlotForDayType', () => {
+  it('remplace le créneau du même jour + type même si la recette change', () => {
+    const a = slot({ id: 'a', date: '2026-11-09', mealType: 'diner', recipeId: 'r1' });
+    const next = replaceMealSlotForDayType([a], {
+      id: 'b',
+      date: '2026-11-09',
+      mealType: 'diner',
+      recipeId: 'r2',
+      servingsOverride: 3,
+    });
+    assert.equal(next.length, 1);
+    assert.equal(next[0]?.id, 'a');
+    assert.equal(next[0]?.recipeId, 'r2');
+    assert.equal(next[0]?.servingsOverride, 3);
+  });
+
+  it('ajoute un type distinct le même jour', () => {
+    const a = slot({ id: 'a', date: '2026-11-09', mealType: 'dejeuner', recipeId: 'r1' });
+    const next = replaceMealSlotForDayType([a], {
+      id: 'b',
+      date: '2026-11-09',
+      mealType: 'petit_dejeuner',
+      recipeId: 'r2',
+      servingsOverride: null,
+    });
+    assert.equal(next.length, 2);
+    assert.equal(next[1]?.mealType, 'petit_dejeuner');
   });
 });
