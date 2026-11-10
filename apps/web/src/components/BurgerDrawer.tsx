@@ -120,10 +120,6 @@ export function BurgerDrawer({ open, onClose, triggerRef }: BurgerDrawerProps) {
           ) : null}
         </div>
 
-        <div className="burger-sync">
-          <SyncIndicator compact />
-        </div>
-
         <nav className="burger-nav" aria-label="Compte et foyer">
           <DrawerLink to="/produits" onNavigate={onClose} meta="Catalogue & personnalisés">
             Produits
@@ -166,12 +162,12 @@ export function BurgerDrawer({ open, onClose, triggerRef }: BurgerDrawerProps) {
               <span className="meta">Safari → Partager → Sur l’écran d’accueil</span>
             </div>
           ) : null}
-
-          <div className="burger-hint burger-about">
-            <strong>À propos</strong>
-            <span className="meta">OrgMyMiam : recettes, planning & courses, même hors ligne.</span>
-          </div>
         </nav>
+
+        {/* Placement choisi : bas du menu, au-dessus de Déconnexion (statut discret, tap = force sync). */}
+        <div className="burger-sync burger-sync-footer">
+          <SyncIndicator compact />
+        </div>
 
         <button
           type="button"
