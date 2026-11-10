@@ -2,26 +2,25 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { Recipe, RecipeIngredient } from '@orgmymiam/shared';
 import {
+  createProduct,
   createRecipe,
   resolveIngredientFromHit,
-  resolveIngredientFromNewProduct,
   updateRecipe,
 } from '../data/crud';
 import { lookupProductLabel } from '../data/productSearch';
 import type { ProductHit } from '../data/productSearch';
 import { formatQuantityOf, roundQty, scaleQuantity } from '../lib/units';
 import { ProductSearchBox } from './ProductSearchBox';
+import { TrashIcon } from './icons';
 import { UnitSelect } from './UnitSelect';
 import { VisibilityToggle } from './VisibilityToggle';
 
 interface DraftIngredient extends RecipeIngredient {
   key: string;
   name: string;
+  /** Nouveau produit : écriture BDD seulement à l’enregistrement de la recette. */
+  pendingCreateName?: string;
 }
-
-type PendingDraft =
-  | { kind: 'hit'; hit: ProductHit; quantity: string; unit: string }
-  | { kind: 'create'; name: string; quantity: string; unit: string };
 
 interface RecipeEditorProps {
   recipe?: Recipe | null;
@@ -41,12 +40,51 @@ function personsLabel(n: number): string {
   return `${n} personne${n === 1 ? '' : 's'}`;
 }
 
+function mergeOrAppend(
+  rows: DraftIngredient[],
+  next: DraftIngredient,
+): { rows: DraftIngredient[]; notice: string | null; error: string | null } {
+  const dupIndex = rows.findIndex((row) => {
+    if (next.pendingCreateName) {
+      return (
+        row.pendingCreateName != null &&
+        row.pendingCreateName.trim().toLowerCase() === next.pendingCreateName.trim().toLowerCase()
+      );
+    }
+    return (
+      !row.pendingCreateName &&
+      row.productId === next.productId &&
+      row.productSource === next.productSource
+    );
+  });
+
+  if (dupIndex < 0) {
+    return { rows: [...rows, next], notice: null, error: null };
+  }
+
+  const existing = rows[dupIndex]!;
+  if (existing.unit !== next.unit) {
+    return {
+      rows,
+      notice: null,
+      error: `« ${next.name} » est déjà dans la liste (${existing.quantity} ${existing.unit}). Harmonise l’unité ou retire la ligne.`,
+    };
+  }
+
+  return {
+    rows: rows.map((row, i) =>
+      i === dupIndex ? { ...row, quantity: roundQty(row.quantity + next.quantity) } : row,
+    ),
+    notice: `Quantité de « ${next.name} » augmentée.`,
+    error: null,
+  };
+}
+
 export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
   const [title, setTitle] = useState(recipe?.title ?? '');
   const [servings, setServings] = useState(recipe?.servings ?? 2);
   const [notes, setNotes] = useState(recipe?.notes ?? '');
   const [ingredients, setIngredients] = useState<DraftIngredient[]>([]);
-  const [pending, setPending] = useState<PendingDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -87,93 +125,49 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
           quantity: scaleQuantity(row.quantity, prev, next),
         })),
       );
-      setNotice(`Quantités adaptées pour ${personsLabel(next)}.`);
+      setNotice(`Quantités mises à jour pour ${personsLabel(next)}.`);
     }
     setServings(next);
   }
 
-  function pickHit(hit: ProductHit) {
+  async function pickHit(hit: ProductHit) {
     setError(null);
-    setPending({
-      kind: 'hit',
-      hit,
-      quantity: '1',
-      unit: hit.defaultUnit || 'unité',
-    });
+    try {
+      const resolved = await resolveIngredientFromHit(hit, 1, hit.defaultUnit || 'unité');
+      const next: DraftIngredient = {
+        key: crypto.randomUUID(),
+        productId: resolved.productId,
+        productSource: resolved.productSource,
+        quantity: resolved.quantity,
+        unit: resolved.unit,
+        name: resolved.name,
+      };
+      const result = mergeOrAppend(ingredients, next);
+      setIngredients(result.rows);
+      setNotice(result.notice);
+      setError(result.error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ajout impossible');
+    }
   }
 
   function pickCreate(name: string) {
     setError(null);
-    setPending({
-      kind: 'create',
-      name,
-      quantity: '1',
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const next: DraftIngredient = {
+      key: crypto.randomUUID(),
+      productId: crypto.randomUUID(),
+      productSource: 'user',
+      quantity: 1,
       unit: 'unité',
-    });
-  }
-
-  function clearPending() {
-    setPending(null);
-  }
-
-  async function confirmPending() {
-    if (!pending) return;
-    const qty = Number(pending.quantity);
-    if (!Number.isFinite(qty) || qty <= 0) {
-      setError('Quantité invalide');
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const resolved =
-        pending.kind === 'hit'
-          ? await resolveIngredientFromHit(pending.hit, qty, pending.unit)
-          : await resolveIngredientFromNewProduct(pending.name, qty, pending.unit);
-
-      const dupIndex = ingredients.findIndex(
-        (row) =>
-          row.productId === resolved.productId && row.productSource === resolved.productSource,
-      );
-
-      if (dupIndex >= 0) {
-        const existing = ingredients[dupIndex]!;
-        if (existing.unit !== resolved.unit) {
-          setError(
-            `« ${resolved.name} » est déjà dans la liste (${existing.quantity} ${existing.unit}). Harmonise l’unité ou retire la ligne.`,
-          );
-          return;
-        }
-        setIngredients((prev) =>
-          prev.map((row, i) =>
-            i === dupIndex
-              ? { ...row, quantity: roundQty(row.quantity + resolved.quantity) }
-              : row,
-          ),
-        );
-        setNotice(`Quantité de « ${resolved.name} » augmentée.`);
-        setPending(null);
-        return;
-      }
-
-      setIngredients((prev) => [
-        ...prev,
-        {
-          key: crypto.randomUUID(),
-          productId: resolved.productId,
-          productSource: resolved.productSource,
-          quantity: resolved.quantity,
-          unit: resolved.unit,
-          name: resolved.name,
-        },
-      ]);
-      setNotice(null);
-      setPending(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ajout impossible');
-    } finally {
-      setBusy(false);
-    }
+      name: trimmed,
+      pendingCreateName: trimmed,
+    };
+    const result = mergeOrAppend(ingredients, next);
+    setIngredients(result.rows);
+    setNotice(result.notice);
+    setError(result.error);
   }
 
   function updateIngredient(key: string, patch: Partial<Pick<DraftIngredient, 'quantity' | 'unit'>>) {
@@ -201,16 +195,34 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
     setBusy(true);
     setError(null);
     try {
+      const resolvedIngredients: RecipeIngredient[] = [];
+      for (const ing of ingredients) {
+        if (ing.pendingCreateName) {
+          const created = await createProduct({
+            name: ing.pendingCreateName,
+            defaultUnit: ing.unit,
+          });
+          resolvedIngredients.push({
+            productId: created.product._id,
+            productSource: 'user',
+            quantity: roundQty(ing.quantity),
+            unit: ing.unit,
+          });
+        } else {
+          resolvedIngredients.push({
+            productId: ing.productId,
+            productSource: ing.productSource,
+            quantity: roundQty(ing.quantity),
+            unit: ing.unit,
+          });
+        }
+      }
+
       const payload = {
         title,
         servings: servingsNum,
         notes,
-        ingredients: ingredients.map(({ productId, productSource, quantity: q, unit: u }) => ({
-          productId,
-          productSource,
-          quantity: roundQty(q),
-          unit: u,
-        })),
+        ingredients: resolvedIngredients,
       };
       if (recipe) {
         await updateRecipe(recipe._id, payload);
@@ -224,12 +236,6 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
       setBusy(false);
     }
   }
-
-  const pendingName = pending
-    ? pending.kind === 'hit'
-      ? pending.hit.name
-      : pending.name
-    : '';
 
   return (
     <div className="editor-panel recipe-editor soft-card">
@@ -258,7 +264,10 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
           />
         </label>
         <p className="portions-banner" role="status">
-          Quantités pour {personsLabel(Number(servings) > 0 ? Number(servings) : 1)}.
+          Les quantités suivent le nombre de personnes ({personsLabel(
+            Number(servings) > 0 ? Number(servings) : 1,
+          )}
+          ).
         </p>
         {notice ? <p className="search-notice">{notice}</p> : null}
         <label>
@@ -315,10 +324,12 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
               </div>
               <button
                 type="button"
-                className="ghost-btn"
+                className="icon-btn soft"
+                aria-label={`Retirer ${ing.name}`}
+                title="Retirer"
                 onClick={() => setIngredients((prev) => prev.filter((row) => row.key !== ing.key))}
               >
-                Retirer
+                <TrashIcon />
               </button>
             </li>
           ))}
@@ -327,65 +338,20 @@ export function RecipeEditor({ recipe, onDone, onCancel }: RecipeEditorProps) {
 
       <div className="ingredient-adder">
         <h4 className="adder-title">Ajouter un ingrédient</h4>
-        {pending ? (
-          <div className="draft-panel stack-form">
-            <p className="draft-product">
-              <strong>{pendingName}</strong>
-              {pending.kind === 'hit' ? (
-                <span className="meta">Unité suggérée : {pending.hit.defaultUnit}</span>
-              ) : (
-                <span className="meta">Nouveau produit</span>
-              )}
-            </p>
-            <div className="qty-row">
-              <label>
-                Quantité
-                <input
-                  value={pending.quantity}
-                  onChange={(e) => setPending({ ...pending, quantity: e.target.value })}
-                  inputMode="decimal"
-                  aria-describedby="recipe-qty-help"
-                />
-              </label>
-              <label>
-                Unité
-                <UnitSelect
-                  value={pending.unit}
-                  onChange={(unit) => setPending({ ...pending, unit })}
-                />
-              </label>
-            </div>
-            <p id="recipe-qty-help" className="field-help">
-              Vérifie la quantité puis confirme. Ex. 400 g, 2 pièces.
-            </p>
-            <div className="editor-actions wrap">
-              <button
-                type="button"
-                className="primary-btn"
-                disabled={busy}
-                onClick={() => void confirmPending()}
-              >
-                Ajouter
-              </button>
-              <button type="button" className="ghost-btn" disabled={busy} onClick={clearPending}>
-                Annuler
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <p className="field-help">Choisis un produit, puis renseigne la quantité.</p>
-            <ProductSearchBox
-              busy={busy}
-              compact
-              placeholder="Chercher un ingrédient…"
-              addLabel="Choisir"
-              reuseLabel="Choisir"
-              onCreate={(name) => pickCreate(name)}
-              onSelect={(hit) => pickHit(hit)}
-            />
-          </>
-        )}
+        <p className="field-help">
+          Choisis un produit : il s’ajoute tout de suite. Tu peux ensuite modifier la quantité et
+          l’unité.
+        </p>
+        <ProductSearchBox
+          busy={busy}
+          compact
+          hideHitMeta
+          placeholder="Chercher un ingrédient…"
+          addLabel="Ajouter"
+          reuseLabel="Ajouter"
+          onCreate={(name) => pickCreate(name)}
+          onSelect={(hit) => void pickHit(hit)}
+        />
       </div>
 
       {error ? <p className="form-error">{error}</p> : null}

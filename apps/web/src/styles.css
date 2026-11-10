@@ -872,7 +872,19 @@ select {
 
 .product-create-unit {
   margin-bottom: 0.85rem;
-  max-width: 16rem;
+  max-width: none;
+}
+
+.ingredient-rows .icon-btn.soft {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.product-list .icon-btn.soft {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 a.entity-main-btn {

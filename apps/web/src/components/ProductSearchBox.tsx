@@ -1,12 +1,10 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
-  categoryLabel,
   loadProductUniverse,
   searchProductHits,
   type ProductHit,
 } from '../data/productSearch';
-import { unitDisplayLabel } from '../lib/units';
 
 export interface ProductSearchBoxProps {
   busy?: boolean;
@@ -19,6 +17,8 @@ export interface ProductSearchBoxProps {
   reuseLabel?: string;
   /** Mode compact (éditeurs) */
   compact?: boolean;
+  /** Masque type / unité recommandée sous chaque suggestion */
+  hideHitMeta?: boolean;
 }
 
 export function ProductSearchBox({
@@ -29,6 +29,7 @@ export function ProductSearchBox({
   addLabel = 'Ajouter',
   reuseLabel = 'Réutiliser',
   compact = false,
+  hideHitMeta = false,
 }: ProductSearchBoxProps) {
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -172,9 +173,9 @@ export function ProductSearchBox({
                       <span className="suggest-main">
                         <strong>{hit.name}</strong>
                       </span>
-                      <span className="meta">
-                        {categoryLabel(hit.category)} · unité {unitDisplayLabel(hit.defaultUnit)}
-                      </span>
+                      {!hideHitMeta && hit.source === 'user' ? (
+                        <span className="meta">dans ma liste</span>
+                      ) : null}
                     </button>
                   </li>
                 );
