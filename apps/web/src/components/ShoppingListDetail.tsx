@@ -302,34 +302,36 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
           <button type="button" className="back-link" onClick={onBack}>
             ← Retour
           </button>
-          <ActionMenu label="Autres actions">
-            <ActionMenuItem
-              disabled={busy || list.items.length === 0}
-              onSelect={() => void onShare()}
-            >
-              Partager
-            </ActionMenuItem>
-            <ActionMenuItem
-              disabled={busy || list.items.length === 0}
-              onSelect={onPrint}
-            >
-              Imprimer
-            </ActionMenuItem>
-            <ActionMenuItem onSelect={() => void onCloseList()}>
-              {list.status === 'open' ? 'Marquer terminée' : 'Rouvrir'}
-            </ActionMenuItem>
-            {canRegenerate ? (
+          {!reorderMode ? (
+            <ActionMenu label="Autres actions">
               <ActionMenuItem
-                disabled={busy}
-                onSelect={() => void onRegenerate()}
+                disabled={busy || list.items.length === 0}
+                onSelect={() => void onShare()}
               >
-                Mettre à jour depuis le planning
+                Partager
               </ActionMenuItem>
-            ) : null}
-            <ActionMenuItem danger onSelect={onDeleteList}>
-              Supprimer
-            </ActionMenuItem>
-          </ActionMenu>
+              <ActionMenuItem
+                disabled={busy || list.items.length === 0}
+                onSelect={onPrint}
+              >
+                Imprimer
+              </ActionMenuItem>
+              <ActionMenuItem onSelect={() => void onCloseList()}>
+                {list.status === 'open' ? 'Marquer terminée' : 'Rouvrir'}
+              </ActionMenuItem>
+              {canRegenerate ? (
+                <ActionMenuItem
+                  disabled={busy}
+                  onSelect={() => void onRegenerate()}
+                >
+                  Mettre à jour depuis le planning
+                </ActionMenuItem>
+              ) : null}
+              <ActionMenuItem danger onSelect={onDeleteList}>
+                Supprimer
+              </ActionMenuItem>
+            </ActionMenu>
+          ) : null}
         </div>
 
         <h1>
