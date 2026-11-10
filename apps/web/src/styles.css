@@ -2055,6 +2055,47 @@ textarea {
   line-height: 1.35;
 }
 
+.editor-header-left {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.planning-day-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.15rem;
+}
+
+.planning-day-nav-label {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-control);
+  background: var(--sage-tint);
+  color: var(--forest);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.planning-day-nav-btn {
+  appearance: none;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--forest);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
 .planning-editor-form {
   padding: 1.05rem;
   border-radius: var(--radius-card);
