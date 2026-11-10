@@ -5,6 +5,7 @@ import {
   addExtraItemToList,
   createProduct,
   removeShoppingItem,
+  reorderShoppingItems,
   softDeleteShoppingList,
   toggleShoppingItem,
   updateShoppingItemFields,
@@ -14,12 +15,13 @@ import { getCachedHousehold } from '../data/household';
 import type { ProductHit } from '../data/productSearch';
 import {
   buildExtraItemFromHit,
-  groupItemsByCategory,
+  orderedShoppingItems,
   regenerateMealItems,
 } from '../data/shoppingList';
 import { db } from '../db/database';
 import { useHousehold } from '../hooks/useHousehold';
 import { initialsFromName } from '../lib/initials';
+import { formatPlanDate } from '../lib/planDates';
 import {
   formatPrintDate,
   formatShoppingListShareText,
@@ -28,6 +30,7 @@ import { formatQuantity } from '../lib/units';
 import { runSync } from '../sync/engine';
 import { ActionMenu, ActionMenuItem } from './ActionMenu';
 import { ProductSearchBox } from './ProductSearchBox';
+import { TrashIcon } from './icons';
 import { useToast } from './ToastHost';
 import { UnitSelect } from './UnitSelect';
 import { HouseholdBadge, VisibilityToggle } from './VisibilityToggle';
@@ -36,12 +39,6 @@ interface ShoppingListDetailProps {
   listId: string;
   onBack: () => void;
 }
-
-type PendingDraft =
-  | { kind: 'hit'; hit: ProductHit; quantity: string; unit: string }
-  | { kind: 'create'; name: string; quantity: string; unit: string };
-
-type ItemFilter = 'active' | 'all';
 
 export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) {
   const { session } = useAuth();
@@ -67,31 +64,13 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     }
     return undefined;
   }, [listId, userId]);
-  const planInfo = useLiveQuery(async () => {
-    if (!list?.mealPlanId) return null;
-    const plan = await db.mealPlans.get(list.mealPlanId);
-    if (!plan || plan.deletedAt) return null;
-    const servings = plan.slots
-      .map((slot) => slot.servingsOverride)
-      .filter((n): n is number => n != null && n > 0);
-    const unique = [...new Set(servings)];
-    return {
-      title: plan.title,
-      mealCount: plan.slots.length,
-      portionsHint:
-        unique.length === 1
-          ? `Quantités pour ${unique[0]} personne${unique[0] === 1 ? '' : 's'} (selon le planning)`
-          : 'Quantités selon les portions de chaque repas du planning',
-    };
-  }, [list?.mealPlanId, userId]);
 
-  const [pending, setPending] = useState<PendingDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [itemFilter, setItemFilter] = useState<ItemFilter>('all');
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editQty, setEditQty] = useState('');
   const [editUnit, setEditUnit] = useState('unité');
+  const [editNote, setEditNote] = useState('');
 
   // Polling sync 8s tant que le détail liste est ouvert
   useEffect(() => {
@@ -103,17 +82,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     return () => window.clearInterval(timer);
   }, [listId]);
 
-  const groups = useMemo(() => {
-    if (!list) return [];
-    const items =
-      itemFilter === 'all' ? list.items : list.items.filter((i) => !i.checked);
-    return groupItemsByCategory(items);
-  }, [list, itemFilter]);
-
-  const printGroups = useMemo(() => {
-    if (!list) return [];
-    return groupItemsByCategory(list.items);
-  }, [list]);
+  const items = useMemo(() => (list ? orderedShoppingItems(list.items) : []), [list]);
 
   const progress = useMemo(() => {
     if (!list || list.items.length === 0) return { done: 0, total: 0, pct: 0 };
@@ -145,80 +114,74 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     }
   }
 
-  function pickHit(hit: ProductHit) {
-    setFeedback(null);
-    setPending({
-      kind: 'hit',
-      hit,
-      quantity: '1',
-      unit: hit.defaultUnit || 'unité',
-    });
-  }
-
-  function pickCreate(name: string) {
-    setFeedback(null);
-    setPending({
-      kind: 'create',
-      name,
-      quantity: '1',
-      unit: 'unité',
-    });
-  }
-
-  async function confirmPending() {
-    if (!pending) return;
-    const qty = Number(pending.quantity);
-    if (!Number.isFinite(qty) || qty <= 0) {
-      setFeedback('Quantité invalide');
+  async function persistExtraHit(hit: ProductHit) {
+    const item = await buildExtraItemFromHit(hit, 1, hit.defaultUnit || 'unité');
+    const current = await db.shoppingLists.get(listId);
+    const otherUnit = current?.items.find(
+      (row) =>
+        row.origin === 'extra' &&
+        row.productId === item.productId &&
+        row.productSource === item.productSource &&
+        row.unit !== item.unit,
+    );
+    if (otherUnit) {
+      setFeedback(
+        `« ${hit.name} » est déjà sur la liste (${formatQuantity(otherUnit.quantity, otherUnit.unit)}). Harmonise l’unité ou modifie la ligne.`,
+      );
       return;
     }
+    const before = current?.items.find(
+      (row) =>
+        row.origin === 'extra' &&
+        row.productId === item.productId &&
+        row.productSource === item.productSource &&
+        row.unit === item.unit,
+    );
+    await addExtraItemToList(listId, item);
+    if (before) {
+      setFeedback(`Quantité de « ${hit.name} » augmentée.`);
+      setExpandedId(before.id);
+      setEditQty(String(before.quantity + item.quantity));
+      setEditUnit(before.unit);
+      setEditNote(before.note ?? '');
+    } else {
+      setFeedback(`Ajouté : ${hit.name}`);
+      setExpandedId(item.id);
+      setEditQty(String(item.quantity));
+      setEditUnit(item.unit);
+      setEditNote('');
+    }
+  }
+
+  async function addHitDirect(hit: ProductHit) {
     setBusy(true);
     setFeedback(null);
     try {
-      let hit: ProductHit;
-      if (pending.kind === 'hit') {
-        hit = pending.hit;
-      } else {
-        const created = await createProduct({ name: pending.name, defaultUnit: pending.unit });
-        hit = {
-          id: `user:${created.product._id}`,
-          name: created.product.name,
-          nameNormalized: created.product.nameNormalized,
-          category: created.product.category,
-          defaultUnit: created.product.defaultUnit,
-          source: 'user',
-          userProductId: created.product._id,
-        };
-      }
+      await persistExtraHit(hit);
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : 'Ajout impossible');
+    } finally {
+      setBusy(false);
+    }
+  }
 
-      const item = await buildExtraItemFromHit(hit, qty, pending.unit);
-      const current = await db.shoppingLists.get(listId);
-      const otherUnit = current?.items.find(
-        (row) =>
-          row.origin === 'extra' &&
-          row.productId === item.productId &&
-          row.productSource === item.productSource &&
-          row.unit !== item.unit,
-      );
-      if (otherUnit) {
-        setFeedback(
-          `« ${hit.name} » est déjà sur la liste (${formatQuantity(otherUnit.quantity, otherUnit.unit)}). Harmonise l’unité ou modifie la ligne.`,
-        );
-        return;
-      }
-
-      const before = current?.items.find(
-        (row) =>
-          row.origin === 'extra' &&
-          row.productId === item.productId &&
-          row.productSource === item.productSource &&
-          row.unit === item.unit,
-      );
-      await addExtraItemToList(listId, item);
-      setFeedback(
-        before ? `Quantité de « ${hit.name} » augmentée.` : `Ajouté : ${hit.name}`,
-      );
-      setPending(null);
+  async function addCreateDirect(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const created = await createProduct({ name: trimmed, defaultUnit: 'unité' });
+      const hit: ProductHit = {
+        id: `user:${created.product._id}`,
+        name: created.product.name,
+        nameNormalized: created.product.nameNormalized,
+        category: created.product.category,
+        defaultUnit: created.product.defaultUnit,
+        source: 'user',
+        userProductId: created.product._id,
+      };
+      await persistExtraHit(hit);
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : 'Ajout impossible');
     } finally {
@@ -247,13 +210,18 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     });
   }
 
-  function startEdit(itemId: string, quantity: number, unit: string) {
-    setEditingId(itemId);
+  function openExpand(itemId: string, quantity: number, unit: string, note: string) {
+    if (expandedId === itemId) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(itemId);
     setEditQty(String(quantity));
     setEditUnit(unit);
+    setEditNote(note);
   }
 
-  async function saveEdit(itemId: string) {
+  async function saveExpand(itemId: string) {
     const qty = Number(editQty);
     if (!Number.isFinite(qty) || qty <= 0) {
       setFeedback('Quantité invalide');
@@ -262,8 +230,12 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     setBusy(true);
     setFeedback(null);
     try {
-      await updateShoppingItemFields(listId, itemId, { quantity: qty, unit: editUnit });
-      setEditingId(null);
+      await updateShoppingItemFields(listId, itemId, {
+        quantity: qty,
+        unit: editUnit,
+        note: editNote,
+      });
+      setExpandedId(null);
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : 'Modification impossible');
     } finally {
@@ -271,9 +243,26 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     }
   }
 
+  async function moveItem(itemId: string, direction: -1 | 1) {
+    const ids = items.map((i) => i.id);
+    const index = ids.indexOf(itemId);
+    if (index < 0) return;
+    const target = index + direction;
+    if (target < 0 || target >= ids.length) return;
+    const next = [...ids];
+    const [row] = next.splice(index, 1);
+    next.splice(target, 0, row!);
+    setBusy(true);
+    try {
+      await reorderShoppingItems(listId, next);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onShare() {
     if (!list) return;
-    const text = formatShoppingListShareText(list.title, list.items);
+    const text = formatShoppingListShareText(list.title, list.items, list.notes);
     const title = list.title;
     if (typeof navigator.share === 'function') {
       try {
@@ -281,7 +270,6 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
         return;
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
-        // Fallback presse-papiers si share échoue (hors annulation).
       }
     }
     try {
@@ -301,11 +289,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
     void softDeleteShoppingList(listId).then(onBack);
   }
 
-  const pendingName = pending
-    ? pending.kind === 'hit'
-      ? pending.hit.name
-      : pending.name
-    : '';
+  const canRegenerate = Boolean(list.mealPlanId || (list.rangeFrom && list.rangeTo));
 
   return (
     <div className="editor-panel shopping-list-detail">
@@ -330,7 +314,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
             <ActionMenuItem onSelect={() => void onCloseList()}>
               {list.status === 'open' ? 'Marquer terminée' : 'Rouvrir'}
             </ActionMenuItem>
-            {list.mealPlanId ? (
+            {canRegenerate ? (
               <ActionMenuItem
                 disabled={busy}
                 onSelect={() => void onRegenerate()}
@@ -347,6 +331,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
         <h1>
           {list.title} <HouseholdBadge visibility={list.visibility} />
         </h1>
+        {list.notes ? <p className="list-notes">{list.notes}</p> : null}
         {list.visibility === 'household' ? (
           <p className="meta members-hint">
             {list.memberIds.length} membre{list.memberIds.length === 1 ? '' : 's'} · sync auto
@@ -360,7 +345,15 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
         <div className="list-status-row">
           <p className="lede list-status-lede">
             {list.status === 'open' ? 'Ouverte' : 'Terminée'}
-            {planInfo ? ` · planning « ${planInfo.title} »` : ' · sans planning'}
+            {list.rangeFrom && list.rangeTo
+              ? ` · ${
+                  list.rangeFrom === list.rangeTo
+                    ? formatPlanDate(list.rangeFrom)
+                    : `${formatPlanDate(list.rangeFrom)} → ${formatPlanDate(list.rangeTo)}`
+                }`
+              : list.mealPlanId
+                ? ' · depuis planning'
+                : ' · sans planning'}
           </p>
           <div
             className="progress-pill"
@@ -377,56 +370,33 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
             </span>
           </div>
         </div>
-        {planInfo ? (
-          <p className="portions-banner" role="status">
-            {planInfo.portionsHint}
-            {planInfo.mealCount > 0 ? ` · ${planInfo.mealCount} repas` : ''}
-          </p>
-        ) : null}
 
-        <div
-          className="segmented"
-          role="group"
-          aria-label="Filtrer les articles"
-        >
-          <button
-            type="button"
-            className={itemFilter === 'active' ? 'segmented-btn active' : 'segmented-btn'}
-            aria-pressed={itemFilter === 'active'}
-            onClick={() => setItemFilter('active')}
-          >
-            En cours
-          </button>
-          <button
-            type="button"
-            className={itemFilter === 'all' ? 'segmented-btn active' : 'segmented-btn'}
-            aria-pressed={itemFilter === 'all'}
-            onClick={() => setItemFilter('all')}
-          >
-            Tout
-          </button>
-        </div>
-
-        {groups.length === 0 ? (
+        {items.length === 0 ? (
           <div className="empty-state">
-            <p className="empty-state-title">
-              {itemFilter === 'active' && progress.total > 0
-                ? 'Tout est coché'
-                : 'Liste vide'}
-            </p>
+            <p className="empty-state-title">Liste vide</p>
             <p className="empty-state-desc">
-              {itemFilter === 'active' && progress.total > 0
-                ? 'Passe sur « Tout » pour revoir les articles cochés.'
-                : 'Ajoute un produit ci-dessous, ou reviens générer depuis un planning.'}
+              Ajoute un produit ci-dessous, ou reviens générer depuis le planning.
             </p>
           </div>
         ) : (
-          groups.map((group) => (
-            <section key={group.category} className="category-block">
-              <h2 className="category-title">{group.label}</h2>
-              <ul className="shop-list">
-                {group.items.map((item) => (
-                  <li key={item.id} className={item.checked ? 'shop-item checked' : 'shop-item'}>
+          <ul className="shop-list shop-list-flat">
+            {items.map((item, index) => {
+              const expanded = expandedId === item.id;
+              const note = item.note ?? '';
+              return (
+                <li
+                  key={item.id}
+                  className={
+                    item.checked
+                      ? expanded
+                        ? 'shop-item checked is-expanded'
+                        : 'shop-item checked'
+                      : expanded
+                        ? 'shop-item is-expanded'
+                        : 'shop-item'
+                  }
+                >
+                  <div className="shop-item-main">
                     <label className="shop-check">
                       <input
                         className="shop-check-input"
@@ -447,6 +417,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                           {formatQuantity(item.quantity, item.unit)}
                           {item.origin === 'extra' ? ' · ajouté' : ''}
                         </span>
+                        {note ? <span className="shop-item-note">{note}</span> : null}
                         {item.checked && item.updatedBy && memberById[item.updatedBy] ? (
                           <span
                             className="checked-by-chip"
@@ -457,9 +428,29 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                         ) : null}
                       </span>
                     </label>
-                    <div className="shop-item-actions">
-                      {editingId === item.id ? (
-                        <span className="qty-edit">
+                    <button
+                      type="button"
+                      className="icon-btn soft shop-expand-btn"
+                      aria-expanded={expanded}
+                      aria-label={
+                        expanded
+                          ? `Fermer l’édition de ${item.nameSnapshot}`
+                          : `Modifier ${item.nameSnapshot}`
+                      }
+                      disabled={busy}
+                      onClick={() =>
+                        openExpand(item.id, item.quantity, item.unit, note)
+                      }
+                    >
+                      <ChevronIcon open={expanded} />
+                    </button>
+                  </div>
+
+                  {expanded ? (
+                    <div className="shop-item-expand stack-form">
+                      <div className="qty-row">
+                        <label>
+                          Quantité
                           <input
                             value={editQty}
                             onChange={(e) => setEditQty(e.target.value)}
@@ -467,114 +458,90 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                             aria-label={`Quantité pour ${item.nameSnapshot}`}
                             disabled={busy}
                           />
-                          <UnitSelect value={editUnit} onChange={setEditUnit} disabled={busy} />
-                          <button
-                            type="button"
-                            className="ghost-btn"
+                        </label>
+                        <label>
+                          Unité
+                          <UnitSelect
+                            value={editUnit}
+                            onChange={setEditUnit}
                             disabled={busy}
-                            onClick={() => void saveEdit(item.id)}
-                          >
-                            OK
-                          </button>
-                          <button
-                            type="button"
-                            className="ghost-btn"
-                            onClick={() => setEditingId(null)}
-                          >
-                            Annuler
-                          </button>
-                        </span>
-                      ) : (
+                          />
+                        </label>
+                      </div>
+                      <label>
+                        Note
+                        <input
+                          value={editNote}
+                          onChange={(e) => setEditNote(e.target.value)}
+                          placeholder="Ex. marque, rayon…"
+                          disabled={busy}
+                          maxLength={500}
+                        />
+                      </label>
+                      <div className="shop-expand-actions">
                         <button
                           type="button"
                           className="icon-btn soft"
-                          disabled={busy}
-                          aria-label={`Modifier la quantité de ${item.nameSnapshot}`}
-                          title="Quantité"
-                          onClick={() => startEdit(item.id, item.quantity, item.unit)}
+                          disabled={busy || index === 0}
+                          aria-label="Monter"
+                          title="Monter"
+                          onClick={() => void moveItem(item.id, -1)}
                         >
-                          <QtyIcon />
+                          <ArrowIcon dir="up" />
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        className="icon-btn soft"
-                        aria-label={`Retirer ${item.nameSnapshot}`}
-                        title="Retirer"
-                        onClick={() => void removeShoppingItem(listId, item.id)}
-                      >
-                        <span aria-hidden>×</span>
-                      </button>
+                        <button
+                          type="button"
+                          className="icon-btn soft"
+                          disabled={busy || index === items.length - 1}
+                          aria-label="Descendre"
+                          title="Descendre"
+                          onClick={() => void moveItem(item.id, 1)}
+                        >
+                          <ArrowIcon dir="down" />
+                        </button>
+                        <button
+                          type="button"
+                          className="primary-btn bounce-press"
+                          disabled={busy}
+                          onClick={() => void saveExpand(item.id)}
+                        >
+                          Enregistrer
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn soft"
+                          aria-label={`Retirer ${item.nameSnapshot}`}
+                          title="Retirer"
+                          disabled={busy}
+                          onClick={() => {
+                            setExpandedId(null);
+                            void removeShoppingItem(listId, item.id);
+                          }}
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
         )}
 
         <div className="ingredient-adder">
           <h3 className="subhead">Ajouter un produit</h3>
-          {pending ? (
-            <div className="draft-panel stack-form">
-              <p className="draft-product">
-                <strong>{pendingName}</strong>
-                {pending.kind === 'hit' ? (
-                  <span className="meta">Unité suggérée : {pending.hit.defaultUnit}</span>
-                ) : (
-                  <span className="meta">Nouveau produit</span>
-                )}
-              </p>
-              <div className="qty-row">
-                <label>
-                  Quantité
-                  <input
-                    value={pending.quantity}
-                    onChange={(e) => setPending({ ...pending, quantity: e.target.value })}
-                    inputMode="decimal"
-                  />
-                </label>
-                <label>
-                  Unité
-                  <UnitSelect
-                    value={pending.unit}
-                    onChange={(unit) => setPending({ ...pending, unit })}
-                  />
-                </label>
-              </div>
-              <div className="editor-actions wrap">
-                <button
-                  type="button"
-                  className="primary-btn"
-                  disabled={busy}
-                  onClick={() => void confirmPending()}
-                >
-                  Ajouter
-                </button>
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  disabled={busy}
-                  onClick={() => setPending(null)}
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <p className="field-help">Choisis un produit, puis confirme quantité et unité.</p>
-              <ProductSearchBox
-                busy={busy}
-                compact
-                placeholder="Ex. éponge, snacks…"
-                addLabel="Choisir"
-                reuseLabel="Choisir"
-                onCreate={(name) => pickCreate(name)}
-                onSelect={(hit) => pickHit(hit)}
-              />
-            </>
-          )}
+          <p className="field-help">Sélectionne un produit pour l’ajouter tout de suite.</p>
+          <ProductSearchBox
+            busy={busy}
+            compact
+            hideHitMeta
+            placeholder="Ex. éponge, snacks…"
+            addLabel="Ajouter"
+            reuseLabel="Ajouter"
+            onCreate={(name) => void addCreateDirect(name)}
+            onSelect={(hit) => void addHitDirect(hit)}
+          />
         </div>
 
         {feedback ? <p className="search-notice">{feedback}</p> : null}
@@ -584,50 +551,71 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
         <header className="print-sheet-header">
           <p className="print-brand">OrgMyMiam</p>
           <h1 className="print-title">{list.title}</h1>
+          {list.notes ? <p className="print-notes">{list.notes}</p> : null}
           <p className="print-date">{formatPrintDate()}</p>
           <p className="print-progress">
             {progress.done}/{progress.total} cochés
           </p>
         </header>
-        {printGroups.length === 0 ? (
+        {items.length === 0 ? (
           <p className="print-empty">Liste vide</p>
         ) : (
-          printGroups.map((group) => (
-            <section key={group.category} className="print-category">
-              <h2 className="print-category-title">{group.label}</h2>
-              <ul className="print-list">
-                {group.items.map((item) => (
-                  <li
-                    key={item.id}
-                    className={item.checked ? 'print-item checked' : 'print-item'}
-                  >
-                    <span
-                      className={item.checked ? 'print-box checked' : 'print-box'}
-                      aria-hidden
-                    />
-                    <span className="print-item-body">
-                      <strong>{item.nameSnapshot}</strong>
-                      <span className="print-qty">
-                        {formatQuantity(item.quantity, item.unit)}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))
+          <ul className="print-list">
+            {items.map((item) => (
+              <li
+                key={item.id}
+                className={item.checked ? 'print-item checked' : 'print-item'}
+              >
+                <span
+                  className={item.checked ? 'print-box checked' : 'print-box'}
+                  aria-hidden
+                />
+                <span className="print-item-body">
+                  <strong>{item.nameSnapshot}</strong>
+                  <span className="print-qty">
+                    {formatQuantity(item.quantity, item.unit)}
+                  </span>
+                  {item.note ? <span className="print-item-note">{item.note}</span> : null}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
   );
 }
 
-function QtyIcon() {
+function ChevronIcon({ open }: { open: boolean }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden focusable="false">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s ease' }}
+    >
       <path
-        d="M3.5 11.7 11.2 4l1.8 1.8-7.7 7.7H3.5v-1.8Zm8.2-8.9.9-.9a1.2 1.2 0 0 1 1.7 0l.8.8a1.2 1.2 0 0 1 0 1.7l-.9.9-1.8-1.8Z"
-        fill="currentColor"
+        d="m6 9 6 6 6-6"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ArrowIcon({ dir }: { dir: 'up' | 'down' }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d={dir === 'up' ? 'm6 14 6-6 6 6' : 'm6 10 6 6 6-6'}
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );

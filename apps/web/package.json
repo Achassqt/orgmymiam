@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test src/lib/mealSlots.test.ts src/lib/planDates.test.ts src/lib/homeHub.test.ts"
+    "test": "tsx --test src/lib/mealSlots.test.ts src/lib/planDates.test.ts src/lib/homeHub.test.ts src/lib/shoppingListShare.test.ts"
   },
   "dependencies": {
     "@orgmymiam/shared": "*",

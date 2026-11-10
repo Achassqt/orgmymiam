@@ -975,9 +975,9 @@ textarea {
 
 .shop-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
   min-height: 3.25rem;
   padding: 0.55rem 0.75rem 0.55rem 0.55rem;
   border-radius: var(--radius-tile);
@@ -989,6 +989,71 @@ textarea {
     background 0.2s ease,
     border-color 0.2s ease,
     transform 0.2s var(--ease-bounce);
+}
+
+.shop-item-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.shop-item.is-expanded {
+  border-color: color-mix(in srgb, var(--sage) 45%, var(--line));
+  box-shadow: 0 4px 14px rgba(31, 61, 43, 0.08);
+}
+
+.shop-item-expand {
+  padding: 0.35rem 0.45rem 0.55rem;
+  border-top: 1px solid var(--line);
+  animation: draft-in 0.22s var(--ease-bounce);
+}
+
+.shop-expand-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.shop-expand-btn,
+.shop-expand-actions .icon-btn.soft {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.shop-item-note {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.list-notes {
+  margin: 0.15rem 0 0.55rem;
+  color: var(--forest);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.date-range-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.date-range-row input[type='date'] {
+  min-height: 44px;
+}
+
+.shop-hub-note {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .shop-item.checked {
@@ -2751,11 +2816,23 @@ textarea {
     color: #111;
   }
 
+  .print-notes {
+    margin: 0.35rem 0 0;
+    font-size: 0.95rem;
+    color: #333;
+  }
+
   .print-date,
   .print-progress {
     margin: 0.25rem 0 0;
     font-size: 0.9rem;
     color: #333;
+  }
+
+  .print-item-note {
+    display: block;
+    font-size: 0.85rem;
+    color: #555;
   }
 
   .print-empty {

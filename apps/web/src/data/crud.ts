@@ -385,6 +385,9 @@ export async function softDeleteMealPlan(id: string): Promise<void> {
 export async function createShoppingList(input: {
   title: string;
   mealPlanId?: string | null;
+  rangeFrom?: string | null;
+  rangeTo?: string | null;
+  notes?: string;
   items?: ShoppingListItem[];
 }): Promise<ShoppingList> {
   const userId = await requireUserId();
@@ -399,8 +402,14 @@ export async function createShoppingList(input: {
     userId,
     title: input.title.trim(),
     mealPlanId: input.mealPlanId ?? null,
+    rangeFrom: input.rangeFrom ?? null,
+    rangeTo: input.rangeTo ?? null,
+    notes: input.notes?.trim() ?? '',
     status: 'open',
-    items: input.items ?? [],
+    items: (input.items ?? []).map((item) => ({
+      ...item,
+      note: item.note ?? '',
+    })),
     memberIds,
     householdId: share.householdId,
     visibility: share.visibility,
@@ -420,6 +429,9 @@ export async function updateShoppingList(
     title?: string;
     status?: ShoppingList['status'];
     mealPlanId?: string | null;
+    rangeFrom?: string | null;
+    rangeTo?: string | null;
+    notes?: string;
     items?: ShoppingListItem[];
   },
 ): Promise<ShoppingList> {
@@ -434,6 +446,9 @@ export async function updateShoppingList(
     title: patch.title?.trim() ?? existing.title,
     status: patch.status ?? existing.status,
     mealPlanId: patch.mealPlanId !== undefined ? patch.mealPlanId : existing.mealPlanId,
+    rangeFrom: patch.rangeFrom !== undefined ? patch.rangeFrom : (existing.rangeFrom ?? null),
+    rangeTo: patch.rangeTo !== undefined ? patch.rangeTo : (existing.rangeTo ?? null),
+    notes: patch.notes !== undefined ? patch.notes.trim() : (existing.notes ?? ''),
     items: patch.items ?? existing.items,
     updatedAt: nowIso(),
     rev: existing.rev + 1,
@@ -537,11 +552,11 @@ export async function updateShoppingItemQuantity(
   return updateShoppingItemFields(listId, itemId, { quantity });
 }
 
-/** Ajuste quantité et/ou unité d’une ligne de liste. */
+/** Ajuste quantité, unité et/ou note d’une ligne de liste. */
 export async function updateShoppingItemFields(
   listId: string,
   itemId: string,
-  patch: { quantity?: number; unit?: string },
+  patch: { quantity?: number; unit?: string; note?: string },
 ): Promise<ShoppingList> {
   if (patch.quantity != null && (!Number.isFinite(patch.quantity) || patch.quantity <= 0)) {
     throw new Error('Quantité invalide');
@@ -562,11 +577,36 @@ export async function updateShoppingItemFields(
       ...item,
       quantity: patch.quantity != null ? roundQtyLocal(patch.quantity) : item.quantity,
       unit: patch.unit != null ? patch.unit.trim() : item.unit,
+      note: patch.note !== undefined ? patch.note.trim() : (item.note ?? ''),
       updatedAt: now,
       updatedBy: userId,
     };
   });
   return updateShoppingList(listId, { items });
+}
+
+/** Réordonne les lignes (ordre du tableau = ordre d’affichage). */
+export async function reorderShoppingItems(
+  listId: string,
+  orderedIds: string[],
+): Promise<ShoppingList> {
+  const userId = await requireUserId();
+  const household = await getCachedHousehold();
+  const existing = assertAccessible(await db.shoppingLists.get(listId), userId, household, 'Liste');
+  if (existing.deletedAt) {
+    throw new Error('Liste introuvable');
+  }
+  const byId = new Map(existing.items.map((item) => [item.id, item]));
+  const next: ShoppingListItem[] = [];
+  for (const id of orderedIds) {
+    const row = byId.get(id);
+    if (row) {
+      next.push(row);
+      byId.delete(id);
+    }
+  }
+  for (const row of byId.values()) next.push(row);
+  return updateShoppingList(listId, { items: next });
 }
 
 export async function softDeleteShoppingList(id: string): Promise<void> {
