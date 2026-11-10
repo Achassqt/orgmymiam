@@ -7,10 +7,13 @@ import { PwaInstallBanner } from './PwaInstallBanner';
 
 function IconHome() {
   return (
-    <svg viewBox="0 0 24 24" className="nav-svg" aria-hidden>
+    <svg viewBox="0 0 24 24" className="nav-svg" aria-hidden fill="none">
       <path
-        d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-8.5Z"
-        fill="currentColor"
+        d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -18,10 +21,13 @@ function IconHome() {
 
 function IconRecipes() {
   return (
-    <svg viewBox="0 0 24 24" className="nav-svg" aria-hidden>
+    <svg viewBox="0 0 24 24" className="nav-svg" aria-hidden fill="none">
       <path
-        d="M7 3h7a3 3 0 0 1 3 3v15l-6.5-3L4 21V6a3 3 0 0 1 3-3Z"
-        fill="currentColor"
+        d="M3 17h18M5 17a7 7 0 0 1 14 0M12 10V8M10 8h4M2 20.5h20"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -29,38 +35,50 @@ function IconRecipes() {
 
 function IconPlan() {
   return (
-    <svg viewBox="0 0 24 24" className="nav-svg" aria-hidden>
-      <rect x="3" y="5" width="18" height="16" rx="3" fill="currentColor" />
-      <path d="M8 3v4M16 3v4M3 10h18" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+    <svg viewBox="0 0 24 24" className="nav-svg" aria-hidden fill="none">
+      <rect
+        x="3"
+        y="5"
+        width="18"
+        height="16"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M8 3v4M16 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 function IconCart() {
   return (
-    <svg viewBox="0 0 24 24" className="nav-svg" aria-hidden>
+    <svg viewBox="0 0 24 24" className="nav-svg" aria-hidden fill="none">
+      <circle cx="9" cy="20" r="1.4" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="18" cy="20" r="1.4" stroke="currentColor" strokeWidth="1.8" />
       <path
-        d="M3 5h2l2.2 10h10.3L20 8H8"
-        fill="none"
+        d="M2 3h3l2.6 12.2a1 1 0 0 0 1 .8h9.7a1 1 0 0 0 1-.8L21 7H6"
         stroke="currentColor"
-        strokeWidth="2.4"
+        strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="10" cy="19" r="1.7" fill="currentColor" />
-      <circle cx="17" cy="19" r="1.7" fill="currentColor" />
     </svg>
   );
 }
 
 function IconBurger() {
   return (
-    <svg viewBox="0 0 24 24" className="burger-icon-svg" aria-hidden>
+    <svg viewBox="0 0 24 24" className="burger-icon-svg" aria-hidden fill="none">
       <path
-        d="M5 7h14M5 12h14M5 17h14"
-        fill="none"
+        d="M4 7h16M4 12h16M4 17h16"
         stroke="currentColor"
-        strokeWidth="2.4"
+        strokeWidth="1.8"
         strokeLinecap="round"
       />
     </svg>
