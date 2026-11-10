@@ -105,17 +105,26 @@ export function AppLayout() {
   const location = useLocation();
   const { session } = useAuth();
   const isHome = location.pathname === '/';
+  const isPlanning = location.pathname === '/plans';
   const greeting = homeGreeting(session?.user.displayName);
   useNewMemberToast();
 
+  const topbarClass = isHome
+    ? 'topbar topbar-home'
+    : isPlanning
+      ? 'topbar topbar-planning'
+      : 'topbar';
+
   return (
-    <div className="app-shell">
-      <header className={isHome ? 'topbar topbar-home' : 'topbar'}>
+    <div className={isPlanning ? 'app-shell app-shell-planning' : 'app-shell'}>
+      <header className={topbarClass}>
         {isHome ? (
           <div className="home-greeting">
             <h1 className="home-greeting-title">{greeting.title}</h1>
             <p className="home-greeting-sub">{greeting.subtitle}</p>
           </div>
+        ) : isPlanning ? (
+          <div className="topbar-planning-grow" aria-hidden />
         ) : (
           <p className="brand">OrgMyMiam</p>
         )}
