@@ -60,10 +60,10 @@ export function RecipesPage() {
           {recipes.length > 0 ? (
             <button
               type="button"
-              className="primary-btn"
+              className="primary-btn recipes-add-btn"
               onClick={() => setMode('create')}
             >
-              Nouvelle
+              Ajouter
             </button>
           ) : null}
         </div>
@@ -72,7 +72,7 @@ export function RecipesPage() {
           <EmptyState
             illo="chef"
             title="Ta première recette ?"
-            description="Ajoute un plat, ses portions et ses ingrédients — ensuite place-le au planning."
+            description="Ajoute un plat, ses portions et ses ingrédients, ensuite place-le au planning."
             action={
               <button
                 type="button"

@@ -22,7 +22,7 @@ export interface OutboxEntry {
   createdAt: string;
   attempts: number;
   lastError?: string;
-  /** ISO — ne pas retenter avant cette date */
+  /** ISO - ne pas retenter avant cette date */
   nextRetryAt?: string;
   /** Trop d’échecs : exclu du flush automatique */
   deadLetter?: boolean;
@@ -53,7 +53,7 @@ export interface MetaRecord {
 export const META_KEYS = {
   deviceId: 'deviceId',
   auth: 'auth',
-  /** Dernier userId connu — survit à un auth null (token expiré) pour éviter une purge mono-compte. */
+  /** Dernier userId connu - survit à un auth null (token expiré) pour éviter une purge mono-compte. */
   lastUserId: 'lastUserId',
   /** Cache foyer courant (HouseholdResponse | null). */
   household: 'household',
@@ -74,6 +74,10 @@ export const META_KEYS = {
    * après correctif ligatures (œ→oe). Non user-scoped : une fois par appareil.
    */
   nameNormalizeLigaturesV2: 'nameNormalizeLigaturesV2',
+  /** Titres listes courses sans tiret cadratin (migration locale). */
+  shoppingListEmDashSanitizeV1: 'shoppingListEmDashSanitizeV1',
+  /** Ordre des créneaux Planning (MealType[]) - local appareil. */
+  planningMealOrder: 'planningMealOrder',
 } as const;
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';

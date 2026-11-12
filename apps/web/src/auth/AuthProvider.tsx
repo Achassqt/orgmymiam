@@ -12,6 +12,7 @@ import { loginRequest, logoutLocal, registerRequest } from '../api/client';
 import { refreshHouseholdCache } from '../data/household';
 import { db, META_KEYS, setMeta, type AuthSession } from '../db/database';
 import { migrateNameNormalizedLigatures } from '../db/migrateNameNormalized';
+import { migrateShoppingListEmDashes } from '../db/migrateShoppingListEmDashes';
 import { bindOnlineSync, runSync } from '../sync/engine';
 
 interface AuthContextValue {
@@ -41,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         await migrateNameNormalizedLigatures();
+        await migrateShoppingListEmDashes();
       } catch {
         // migration best-effort : ne bloque pas le boot
       } finally {

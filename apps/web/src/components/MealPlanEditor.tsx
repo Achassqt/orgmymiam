@@ -2,12 +2,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { MealPlan, MealType } from '@orgmymiam/shared';
 import { useAuth } from '../auth/AuthProvider';
-import { buildMealSlot, createMealPlan, updateMealPlan } from '../data/crud';
+import {
+  buildMealSlot,
+  createMealPlan,
+  softDeleteMealPlan,
+  updateMealPlan,
+} from '../data/crud';
 import { MEAL_TYPE_LABELS } from '../data/productSearch';
 import { db } from '../db/database';
-import { PLANNING_MEAL_TYPES } from '../lib/homeHub';
+import { PLANNING_MEAL_TYPES, addDaysIso } from '../lib/homeHub';
 import { formatPlanDate, todayIsoDate } from '../lib/planDates';
-import { replaceMealSlotForDayType } from '../lib/mealSlots';
+import { removeMealSlot, replaceMealSlotForDayType } from '../lib/mealSlots';
+import { TrashIcon } from './icons';
 import { VisibilityToggle } from './VisibilityToggle';
 
 interface MealPlanEditorProps {
@@ -18,15 +24,25 @@ interface MealPlanEditorProps {
   seedSlot?: { date: string; mealType: MealType } | null;
 }
 
-function personsLabel(n: number): string {
-  return `${n} personne${n === 1 ? '' : 's'}`;
-}
-
 function defaultPlanTitle(date: string, mealType: MealType, recipeTitle: string): string {
   const meal = MEAL_TYPE_LABELS[mealType] ?? mealType;
   const trimmed = recipeTitle.trim();
   if (trimmed) return `${meal} · ${trimmed}`.slice(0, 200);
   return `${meal} · ${formatPlanDate(date)}`.slice(0, 200);
+}
+
+function IconDayChevron({ dir }: { dir: 'left' | 'right' }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d={dir === 'left' ? 'm15 18-6-6 6-6' : 'm9 18 6-6-6-6'}
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export function MealPlanEditor({
@@ -59,7 +75,9 @@ export function MealPlanEditor({
   const [mealType, setMealType] = useState<MealType>(bootstrapSlot?.mealType ?? initialMealType);
   const [recipeId, setRecipeId] = useState(bootstrapSlot?.recipeId ?? '');
   const [servingsOverride, setServingsOverride] = useState(
-    bootstrapSlot?.servingsOverride != null ? String(bootstrapSlot.servingsOverride) : '',
+    bootstrapSlot?.servingsOverride != null
+      ? String(bootstrapSlot.servingsOverride)
+      : '',
   );
   const [editingSlotId, setEditingSlotId] = useState<string | null>(bootstrapSlot?.id ?? null);
   const [busy, setBusy] = useState(false);
@@ -74,7 +92,9 @@ export function MealPlanEditor({
     setSlotDate(slot?.date ?? date);
     setMealType(slot?.mealType ?? type);
     setRecipeId(slot?.recipeId ?? '');
-    setServingsOverride(slot?.servingsOverride != null ? String(slot.servingsOverride) : '');
+    setServingsOverride(
+      slot?.servingsOverride != null ? String(slot.servingsOverride) : '',
+    );
     setEditingSlotId(slot?.id ?? null);
     setError(null);
   }, [plan, seedSlot]);
@@ -94,14 +114,27 @@ export function MealPlanEditor({
   const isEdit = Boolean(editingSlotId);
   const mealLabel = MEAL_TYPE_LABELS[mealType] ?? mealType;
 
-  function parseOverride(): number | null {
-    const overrideRaw = servingsOverride.trim();
-    if (overrideRaw === '') return null;
-    const override = Number(overrideRaw);
-    if (!Number.isFinite(override) || override <= 0) {
-      throw new Error('Nombre de personnes invalide');
+  // Préremplir les portions depuis la recette (création ou changement de recette).
+  useEffect(() => {
+    if (!selectedRecipe) return;
+    if (isEdit && bootstrapSlot?.recipeId === selectedRecipe._id && bootstrapSlot.servingsOverride != null) {
+      return;
     }
-    return override;
+    setServingsOverride((prev) => {
+      if (prev.trim() !== '' && isEdit && bootstrapSlot?.recipeId === selectedRecipe._id) {
+        return prev;
+      }
+      return String(selectedRecipe.servings);
+    });
+  }, [selectedRecipe?._id, selectedRecipe?.servings, isEdit, bootstrapSlot?.recipeId, bootstrapSlot?.servingsOverride]);
+
+  function parsePortions(): number {
+    const raw = servingsOverride.trim();
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error('Indique un nombre de portions valide');
+    }
+    return value;
   }
 
   async function onSave() {
@@ -109,13 +142,17 @@ export function MealPlanEditor({
       setError('Choisis une recette (crée-en une d’abord si besoin).');
       return;
     }
-    let override: number | null;
+    let portions: number;
     try {
-      override = parseOverride();
+      portions = parsePortions();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nombre de personnes invalide');
+      setError(err instanceof Error ? err.message : 'Portions invalides');
       return;
     }
+
+    const recipeServings = recipeById[recipeId]?.servings;
+    const override =
+      recipeServings != null && portions === recipeServings ? null : portions;
 
     setBusy(true);
     setError(null);
@@ -162,29 +199,59 @@ export function MealPlanEditor({
     }
   }
 
+  async function onDelete() {
+    if (!plan || !editingSlotId) return;
+    if (!window.confirm('Supprimer ce repas du planning ?')) return;
+
+    setBusy(true);
+    setError(null);
+    try {
+      const nextSlots = removeMealSlot(plan.slots, editingSlotId);
+      if (nextSlots.length === 0) {
+        await softDeleteMealPlan(plan._id);
+      } else {
+        await updateMealPlan(plan._id, { slots: nextSlots });
+      }
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Suppression impossible');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="editor-panel planning-editor">
-      <div className="editor-header editor-header-stack">
+      <div className="editor-header editor-header-stack editor-header-left">
         <button type="button" className="back-link" onClick={onCancel}>
           ← Retour
         </button>
         <h2>{isEdit ? 'Modifier le repas' : 'Ajouter un repas'}</h2>
       </div>
 
-      <p className="planning-editor-context" aria-live="polite">
-        {formatPlanDate(slotDate)} · {mealLabel}
-      </p>
+      <div className="planning-day-nav" aria-label="Jour du repas">
+        <button
+          type="button"
+          className="planning-day-nav-btn"
+          aria-label="Jour précédent"
+          onClick={() => setSlotDate((d) => addDaysIso(d, -1))}
+        >
+          <IconDayChevron dir="left" />
+        </button>
+        <p className="planning-day-nav-label">
+          {formatPlanDate(slotDate)} · {mealLabel}
+        </p>
+        <button
+          type="button"
+          className="planning-day-nav-btn"
+          aria-label="Jour suivant"
+          onClick={() => setSlotDate((d) => addDaysIso(d, 1))}
+        >
+          <IconDayChevron dir="right" />
+        </button>
+      </div>
 
       <div className="stack-form planning-editor-form">
-        <label>
-          Jour
-          <input
-            type="date"
-            value={slotDate}
-            onChange={(e) => setSlotDate(e.target.value)}
-            required
-          />
-        </label>
         <label>
           Type de repas
           <select value={mealType} onChange={(e) => setMealType(e.target.value as MealType)}>
@@ -197,34 +264,34 @@ export function MealPlanEditor({
         </label>
         <label>
           Recette
-          <select value={recipeId} onChange={(e) => setRecipeId(e.target.value)}>
+          <select
+            value={recipeId}
+            onChange={(e) => {
+              const nextId = e.target.value;
+              setRecipeId(nextId);
+              const recipe = recipeById[nextId];
+              if (recipe) setServingsOverride(String(recipe.servings));
+            }}
+          >
             {recipes.length === 0 ? <option value="">Aucune recette</option> : null}
             {recipes.map((recipe) => (
               <option key={recipe._id} value={recipe._id}>
-                {recipe.title} — pour {personsLabel(recipe.servings)}
+                {recipe.title}
               </option>
             ))}
           </select>
         </label>
-        {selectedRecipe ? (
-          <p className="field-help">
-            Recette de base : quantités pour {personsLabel(selectedRecipe.servings)}.
-            {servingsOverride.trim()
-              ? ` Ce repas sera adapté pour ${personsLabel(Number(servingsOverride) || selectedRecipe.servings)}.`
-              : ' Laisse vide pour garder ces portions.'}
-          </p>
-        ) : null}
         <label>
-          Pour combien de personnes ? (optionnel)
+          Portions
           <input
             inputMode="numeric"
-            placeholder={
-              selectedRecipe
-                ? `comme la recette (${selectedRecipe.servings})`
-                : 'comme dans la recette'
-            }
+            required
+            min={1}
             value={servingsOverride}
             onChange={(e) => setServingsOverride(e.target.value)}
+            placeholder={
+              selectedRecipe ? String(selectedRecipe.servings) : 'Nombre de portions'
+            }
           />
         </label>
         {plan ? (
@@ -239,6 +306,18 @@ export function MealPlanEditor({
       {error ? <p className="form-error">{error}</p> : null}
 
       <div className="editor-actions">
+        {isEdit ? (
+          <button
+            type="button"
+            className="icon-btn soft"
+            aria-label="Supprimer ce repas"
+            title="Supprimer"
+            disabled={busy}
+            onClick={() => void onDelete()}
+          >
+            <TrashIcon />
+          </button>
+        ) : null}
         <button
           type="button"
           className="primary-btn"

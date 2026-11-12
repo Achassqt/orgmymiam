@@ -1,4 +1,4 @@
-/** Icône suppression — poubelle claire (pas une croix). Tap target géré par .icon-btn. */
+/** Icône suppression - poubelle claire (pas une croix). Tap target géré par .icon-btn. */
 export function TrashIcon({ size = 20 }: { size?: number }) {
   return (
     <svg

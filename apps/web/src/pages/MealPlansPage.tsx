@@ -8,13 +8,15 @@ import { MealPlanEditor } from '../components/MealPlanEditor';
 import { PullToRefresh } from '../components/PullToRefresh';
 import { HouseholdBadge } from '../components/VisibilityToggle';
 import { MEAL_TYPE_LABELS } from '../data/productSearch';
-import { db } from '../db/database';
+import { META_KEYS, db, setMeta } from '../db/database';
 import {
   PLANNING_MEAL_TYPES,
   addDaysIso,
   formatMinutes,
   formatWeekSubtitle,
   mealTypeOrder,
+  movePlanningMealType,
+  normalizePlanningMealOrder,
   pickDishIllo,
   recipeMinutes,
   weekDayStrip,
@@ -22,11 +24,19 @@ import {
 } from '../lib/homeHub';
 import { todayIsoDate } from '../lib/planDates';
 
-function IconChevron({ dir }: { dir: 'left' | 'right' }) {
+function IconChevron({ dir }: { dir: 'left' | 'right' | 'up' | 'down' }) {
+  const path =
+    dir === 'left'
+      ? 'm15 18-6-6 6-6'
+      : dir === 'right'
+        ? 'm9 18 6-6-6-6'
+        : dir === 'up'
+          ? 'm6 15 6-6 6 6'
+          : 'm6 9 6 6 6-6';
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
-        d={dir === 'left' ? 'm15 18-6-6 6-6' : 'm9 18 6-6-6-6'}
+        d={path}
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
@@ -92,6 +102,22 @@ export function MealPlansPage() {
   const [seedSlot, setSeedSlot] = useState<{ date: string; mealType: MealType } | null>(
     null,
   );
+  const [reorderMode, setReorderMode] = useState(false);
+
+  const storedOrder = useLiveQuery(
+    async () => (await db.meta.get(META_KEYS.planningMealOrder))?.value ?? null,
+    [],
+  );
+  const slotOrder = useMemo(() => {
+    const raw =
+      storedOrder &&
+      typeof storedOrder === 'object' &&
+      !Array.isArray(storedOrder) &&
+      Array.isArray((storedOrder as { order?: unknown }).order)
+        ? ((storedOrder as { order: string[] }).order)
+        : null;
+    return normalizePlanningMealOrder(raw);
+  }, [storedOrder]);
 
   const days = useMemo(() => weekDayStrip(weekAnchor, today), [weekAnchor, today]);
   const weekDates = useMemo(() => days.map((d) => d.date), [days]);
@@ -211,13 +237,18 @@ export function MealPlansPage() {
   }
 
   function mealDots(date: string): boolean[] {
-    return PLANNING_MEAL_TYPES.map((type) =>
+    return slotOrder.map((type) =>
       meals.some((m) => m.date === date && m.mealType === type),
     );
   }
 
   function shiftWeek(deltaDays: number) {
     setWeekAnchor((a) => addDaysIso(a, deltaDays));
+  }
+
+  async function reorderSlot(mealType: PlanningMealType, direction: -1 | 1) {
+    const next = movePlanningMealType(slotOrder, mealType, direction);
+    await setMeta(META_KEYS.planningMealOrder, { order: next });
   }
 
   if (mode === 'create' || (mode === 'edit' && selected)) {
@@ -237,27 +268,27 @@ export function MealPlansPage() {
     <PullToRefresh>
       <section className="page-section planning-page page-enter">
         <header className="planning-header">
-          <div className="planning-titles">
-            <h1 className="planning-title">Planning</h1>
+          <h1 className="planning-title">Planning</h1>
+          <div className="planning-header-row">
             <p className="planning-subtitle">{weekSubtitle}</p>
-          </div>
-          <div className="planning-week-nav">
-            <button
-              type="button"
-              className="planning-week-btn"
-              aria-label="Semaine précédente"
-              onClick={() => shiftWeek(-7)}
-            >
-              <IconChevron dir="left" />
-            </button>
-            <button
-              type="button"
-              className="planning-week-btn"
-              aria-label="Semaine suivante"
-              onClick={() => shiftWeek(7)}
-            >
-              <IconChevron dir="right" />
-            </button>
+            <div className="planning-week-nav">
+              <button
+                type="button"
+                className="planning-week-btn"
+                aria-label="Semaine précédente"
+                onClick={() => shiftWeek(-7)}
+              >
+                <IconChevron dir="left" />
+              </button>
+              <button
+                type="button"
+                className="planning-week-btn"
+                aria-label="Semaine suivante"
+                onClick={() => shiftWeek(7)}
+              >
+                <IconChevron dir="right" />
+              </button>
+            </div>
           </div>
         </header>
 
@@ -284,7 +315,7 @@ export function MealPlansPage() {
                 <span className="planning-week-num">{day.dayNum}</span>
                 <span className="planning-week-dots" aria-hidden>
                   {dots.map((filled, i) => (
-                    <span key={PLANNING_MEAL_TYPES[i]} className={filled ? 'is-filled' : undefined} />
+                    <span key={slotOrder[i]} className={filled ? 'is-filled' : undefined} />
                   ))}
                 </span>
               </button>
@@ -303,24 +334,66 @@ export function MealPlansPage() {
               <h2 id={`planning-day-${selectedDay.date}`} className="planning-day-title">
                 {selectedDay.fullLabel}
               </h2>
-              {selectedDay.isToday ? (
-                <span className="planning-today-badge">Aujourd&apos;hui</span>
-              ) : null}
+              <div className="planning-day-actions">
+                {selectedDay.isToday ? (
+                  <span className="planning-today-badge">Aujourd&apos;hui</span>
+                ) : null}
+                <button
+                  type="button"
+                  className={
+                    reorderMode
+                      ? 'planning-reorder-btn is-active'
+                      : 'planning-reorder-btn'
+                  }
+                  aria-pressed={reorderMode}
+                  onClick={() => setReorderMode((v) => !v)}
+                >
+                  {reorderMode ? 'OK' : 'Réordonner'}
+                </button>
+              </div>
             </header>
 
             <ul className="planning-slots">
-              {PLANNING_MEAL_TYPES.map((mealType) => {
+              {slotOrder.map((mealType, index) => {
                 const meal = mealFor(selectedDay.date, mealType);
                 const label = MEAL_TYPE_LABELS[mealType] ?? mealType;
+                const reorderControls = reorderMode ? (
+                  <div className="planning-slot-reorder">
+                    <button
+                      type="button"
+                      className="planning-slot-move"
+                      aria-label={`Monter ${label}`}
+                      disabled={index === 0}
+                      onClick={() => void reorderSlot(mealType, -1)}
+                    >
+                      <IconChevron dir="up" />
+                    </button>
+                    <button
+                      type="button"
+                      className="planning-slot-move"
+                      aria-label={`Descendre ${label}`}
+                      disabled={index === slotOrder.length - 1}
+                      onClick={() => void reorderSlot(mealType, 1)}
+                    >
+                      <IconChevron dir="down" />
+                    </button>
+                  </div>
+                ) : null;
+
                 if (meal) {
                   const dish = pickDishIllo(meal.recipeTitle);
                   const mins = recipeMinutes(meal.recipeTitle, meal.recipeNotes);
                   return (
-                    <li key={mealType}>
+                    <li key={mealType} className="planning-slot-row">
+                      {reorderControls}
                       <button
                         type="button"
                         className="planning-slot"
-                        onClick={() => openEditMeal(meal)}
+                        onClick={() => {
+                          if (reorderMode) return;
+                          openEditMeal(meal);
+                        }}
+                        disabled={reorderMode}
                       >
                         <span
                           className="planning-slot-thumb"
@@ -350,11 +423,16 @@ export function MealPlansPage() {
                 }
 
                 return (
-                  <li key={mealType}>
+                  <li key={mealType} className="planning-slot-row">
+                    {reorderControls}
                     <button
                       type="button"
                       className="planning-slot-empty"
-                      onClick={() => openAddSlot(selectedDay.date, mealType)}
+                      onClick={() => {
+                        if (reorderMode) return;
+                        openAddSlot(selectedDay.date, mealType);
+                      }}
+                      disabled={reorderMode}
                     >
                       <IconPlus />
                       <span>Ajouter un {label.toLowerCase()}</span>

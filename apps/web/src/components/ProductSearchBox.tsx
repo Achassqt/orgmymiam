@@ -190,7 +190,7 @@ export function ProductSearchBox({
       </form>
 
       {!compact && result.exactMatch && query.trim() ? (
-        <p className="search-hint">Déjà connu : « {result.exactMatch.name} » — on le réutilise.</p>
+        <p className="search-hint">Déjà connu : « {result.exactMatch.name} », on le réutilise.</p>
       ) : null}
 
       {!compact && notice ? <p className="search-notice">{notice}</p> : null}

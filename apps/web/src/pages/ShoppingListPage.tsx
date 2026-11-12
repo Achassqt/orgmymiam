@@ -12,6 +12,7 @@ import { generateShoppingListFromDateRange } from '../data/shoppingList';
 import { db } from '../db/database';
 import { addDaysIso } from '../lib/homeHub';
 import { todayIsoDate } from '../lib/planDates';
+import { sanitizeUiEmDash } from '../lib/shoppingListShare';
 
 function defaultRange(): { from: string; to: string } {
   const from = todayIsoDate();
@@ -205,7 +206,8 @@ export function ShoppingListPage() {
                       </span>
                       <span className="shop-hub-body">
                         <strong className="shop-hub-title">
-                          {list.title} <HouseholdBadge visibility={list.visibility} />
+                          {sanitizeUiEmDash(list.title)}{' '}
+                          <HouseholdBadge visibility={list.visibility} />
                         </strong>
                         <span className="meta">
                           {list.status === 'open' ? 'Ouverte' : 'Terminée'}
@@ -230,10 +232,11 @@ export function ShoppingListPage() {
                     <button
                       type="button"
                       className="icon-btn soft"
-                      aria-label={`Supprimer ${list.title}`}
+                      aria-label={`Supprimer ${sanitizeUiEmDash(list.title)}`}
                       title="Supprimer"
                       onClick={() => {
-                        if (!window.confirm(`Supprimer « ${list.title} » ?`)) return;
+                        if (!window.confirm(`Supprimer « ${sanitizeUiEmDash(list.title)} » ?`))
+                          return;
                         void softDeleteShoppingList(list._id);
                       }}
                     >

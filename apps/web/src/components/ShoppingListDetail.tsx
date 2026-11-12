@@ -25,6 +25,7 @@ import { formatPlanDate } from '../lib/planDates';
 import {
   formatPrintDate,
   formatShoppingListShareText,
+  sanitizeUiEmDash,
 } from '../lib/shoppingListShare';
 import { formatQuantity } from '../lib/units';
 import { runSync } from '../sync/engine';
@@ -71,6 +72,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
   const [editQty, setEditQty] = useState('');
   const [editUnit, setEditUnit] = useState('unité');
   const [editNote, setEditNote] = useState('');
+  const [reorderMode, setReorderMode] = useState(false);
 
   // Polling sync 8s tant que le détail liste est ouvert
   useEffect(() => {
@@ -211,6 +213,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
   }
 
   function openExpand(itemId: string, quantity: number, unit: string, note: string) {
+    if (reorderMode) return;
     if (expandedId === itemId) {
       setExpandedId(null);
       return;
@@ -262,8 +265,9 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
 
   async function onShare() {
     if (!list) return;
-    const text = formatShoppingListShareText(list.title, list.items, list.notes);
-    const title = list.title;
+    const safeTitle = sanitizeUiEmDash(list.title);
+    const text = formatShoppingListShareText(safeTitle, list.items, list.notes);
+    const title = safeTitle;
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share({ title, text });
@@ -298,38 +302,40 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
           <button type="button" className="back-link" onClick={onBack}>
             ← Retour
           </button>
-          <ActionMenu label="Autres actions">
-            <ActionMenuItem
-              disabled={busy || list.items.length === 0}
-              onSelect={() => void onShare()}
-            >
-              Partager
-            </ActionMenuItem>
-            <ActionMenuItem
-              disabled={busy || list.items.length === 0}
-              onSelect={onPrint}
-            >
-              Imprimer
-            </ActionMenuItem>
-            <ActionMenuItem onSelect={() => void onCloseList()}>
-              {list.status === 'open' ? 'Marquer terminée' : 'Rouvrir'}
-            </ActionMenuItem>
-            {canRegenerate ? (
+          {!reorderMode ? (
+            <ActionMenu label="Autres actions">
               <ActionMenuItem
-                disabled={busy}
-                onSelect={() => void onRegenerate()}
+                disabled={busy || list.items.length === 0}
+                onSelect={() => void onShare()}
               >
-                Mettre à jour depuis le planning
+                Partager
               </ActionMenuItem>
-            ) : null}
-            <ActionMenuItem danger onSelect={onDeleteList}>
-              Supprimer
-            </ActionMenuItem>
-          </ActionMenu>
+              <ActionMenuItem
+                disabled={busy || list.items.length === 0}
+                onSelect={onPrint}
+              >
+                Imprimer
+              </ActionMenuItem>
+              <ActionMenuItem onSelect={() => void onCloseList()}>
+                {list.status === 'open' ? 'Marquer terminée' : 'Rouvrir'}
+              </ActionMenuItem>
+              {canRegenerate ? (
+                <ActionMenuItem
+                  disabled={busy}
+                  onSelect={() => void onRegenerate()}
+                >
+                  Mettre à jour depuis le planning
+                </ActionMenuItem>
+              ) : null}
+              <ActionMenuItem danger onSelect={onDeleteList}>
+                Supprimer
+              </ActionMenuItem>
+            </ActionMenu>
+          ) : null}
         </div>
 
         <h1>
-          {list.title} <HouseholdBadge visibility={list.visibility} />
+          {sanitizeUiEmDash(list.title)} <HouseholdBadge visibility={list.visibility} />
         </h1>
         {list.notes ? <p className="list-notes">{list.notes}</p> : null}
         {list.visibility === 'household' ? (
@@ -371,6 +377,33 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
           </div>
         </div>
 
+        {items.length > 1 ? (
+          <div className="shop-reorder-bar">
+            <button
+              type="button"
+              className={
+                reorderMode ? 'planning-reorder-btn is-active' : 'planning-reorder-btn'
+              }
+              aria-pressed={reorderMode}
+              disabled={busy}
+              onClick={() => {
+                setReorderMode((v) => {
+                  const next = !v;
+                  if (next) setExpandedId(null);
+                  return next;
+                });
+              }}
+            >
+              {reorderMode ? 'OK' : 'Réorganiser'}
+            </button>
+            {reorderMode ? (
+              <p className="field-help shop-reorder-hint">
+                Utilise les flèches pour déplacer. Pas d’édition en mode réorganisation.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         {items.length === 0 ? (
           <div className="empty-state">
             <p className="empty-state-title">Liste vide</p>
@@ -397,12 +430,36 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                   }
                 >
                   <div className="shop-item-main">
+                    {reorderMode ? (
+                      <div className="shop-item-reorder">
+                        <button
+                          type="button"
+                          className="icon-btn soft"
+                          disabled={busy || index === 0}
+                          aria-label={`Monter ${item.nameSnapshot}`}
+                          title="Monter"
+                          onClick={() => void moveItem(item.id, -1)}
+                        >
+                          <ArrowIcon dir="up" />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn soft"
+                          disabled={busy || index === items.length - 1}
+                          aria-label={`Descendre ${item.nameSnapshot}`}
+                          title="Descendre"
+                          onClick={() => void moveItem(item.id, 1)}
+                        >
+                          <ArrowIcon dir="down" />
+                        </button>
+                      </div>
+                    ) : null}
                     <label className="shop-check">
                       <input
                         className="shop-check-input"
                         type="checkbox"
                         checked={item.checked}
-                        disabled={busy}
+                        disabled={busy || reorderMode}
                         aria-label={
                           item.checked
                             ? `Décocher ${item.nameSnapshot}`
@@ -428,25 +485,27 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                         ) : null}
                       </span>
                     </label>
-                    <button
-                      type="button"
-                      className="icon-btn soft shop-expand-btn"
-                      aria-expanded={expanded}
-                      aria-label={
-                        expanded
-                          ? `Fermer l’édition de ${item.nameSnapshot}`
-                          : `Modifier ${item.nameSnapshot}`
-                      }
-                      disabled={busy}
-                      onClick={() =>
-                        openExpand(item.id, item.quantity, item.unit, note)
-                      }
-                    >
-                      <ChevronIcon open={expanded} />
-                    </button>
+                    {!reorderMode ? (
+                      <button
+                        type="button"
+                        className="icon-btn soft shop-expand-btn"
+                        aria-expanded={expanded}
+                        aria-label={
+                          expanded
+                            ? `Fermer l’édition de ${item.nameSnapshot}`
+                            : `Modifier ${item.nameSnapshot}`
+                        }
+                        disabled={busy}
+                        onClick={() =>
+                          openExpand(item.id, item.quantity, item.unit, note)
+                        }
+                      >
+                        <ChevronIcon open={expanded} />
+                      </button>
+                    ) : null}
                   </div>
 
-                  {expanded ? (
+                  {!reorderMode && expanded ? (
                     <div className="shop-item-expand stack-form">
                       <div className="qty-row">
                         <label>
@@ -479,26 +538,6 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
                         />
                       </label>
                       <div className="shop-expand-actions">
-                        <button
-                          type="button"
-                          className="icon-btn soft"
-                          disabled={busy || index === 0}
-                          aria-label="Monter"
-                          title="Monter"
-                          onClick={() => void moveItem(item.id, -1)}
-                        >
-                          <ArrowIcon dir="up" />
-                        </button>
-                        <button
-                          type="button"
-                          className="icon-btn soft"
-                          disabled={busy || index === items.length - 1}
-                          aria-label="Descendre"
-                          title="Descendre"
-                          onClick={() => void moveItem(item.id, 1)}
-                        >
-                          <ArrowIcon dir="down" />
-                        </button>
                         <button
                           type="button"
                           className="primary-btn"
@@ -550,7 +589,7 @@ export function ShoppingListDetail({ listId, onBack }: ShoppingListDetailProps) 
       <div className="print-sheet" aria-hidden="true">
         <header className="print-sheet-header">
           <p className="print-brand">OrgMyMiam</p>
-          <h1 className="print-title">{list.title}</h1>
+          <h1 className="print-title">{sanitizeUiEmDash(list.title)}</h1>
           {list.notes ? <p className="print-notes">{list.notes}</p> : null}
           <p className="print-date">{formatPrintDate()}</p>
           <p className="print-progress">

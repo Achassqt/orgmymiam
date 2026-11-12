@@ -1,5 +1,5 @@
 :root {
-  /* —— Refonte forêt / sauge / crème / terracotta —— */
+  /* -- Refonte forêt / sauge / crème / terracotta -- */
   --forest: #1f3d2b;
   --sage: #a9bfa0;
   --cream: #f6f1e7;
@@ -134,6 +134,18 @@ a:focus-visible {
   font-size: 1.4rem;
   font-weight: 400;
   letter-spacing: -0.01em;
+  color: var(--forest);
+}
+
+a.topbar-brand {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  line-height: 1.1;
+}
+
+a.topbar-brand:hover {
   color: var(--forest);
 }
 
@@ -414,7 +426,7 @@ select {
   box-sizing: border-box;
 }
 
-/* bounce-press retiré (OMM-42) — plus d’animation hover sur les boutons */
+/* bounce-press retiré (OMM-42) - plus d’animation hover sur les boutons */
 
 .sync-wrap {
   position: relative;
@@ -510,6 +522,23 @@ select {
   border-radius: 50%;
   background: currentColor;
   flex: 0 0 auto;
+}
+
+.sync-icon-svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+  display: block;
+}
+
+.sync-icon-svg.is-spinning {
+  animation: sync-spin 1s linear infinite;
+}
+
+@keyframes sync-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .auth-screen,
@@ -728,8 +757,6 @@ select {
   justify-content: space-between;
   gap: 0.85rem;
   margin-bottom: 1rem;
-  /* place pour le burger flottant (chrome Accueil/Planning) */
-  padding-right: 3.75rem;
   box-sizing: border-box;
 }
 
@@ -743,7 +770,6 @@ select {
 
 .page-back-row {
   margin: 0 0 0.15rem;
-  padding-right: 3.75rem;
 }
 
 .editor-header-stack {
@@ -773,8 +799,6 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  /* place pour le burger flottant */
-  padding-right: 3.75rem;
   box-sizing: border-box;
 }
 
@@ -835,7 +859,23 @@ select {
 }
 
 .ingredient-name {
-  font-size: 1rem;
+  display: block;
+  font-family: var(--font-sans, inherit);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--forest);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.recipes-add-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  align-self: flex-start;
+}
+
+.screen-recettes .page-heading {
+  align-items: flex-start;
 }
 
 .draft-panel {
@@ -1183,7 +1223,7 @@ textarea {
   z-index: 0;
 }
 
-/* —— Cartoon hub / empty / motion —— */
+/* -- Cartoon hub / empty / motion -- */
 
 .page-enter {
   animation: page-enter 0.35s var(--ease-out);
@@ -1230,63 +1270,11 @@ textarea {
     linear-gradient(145deg, var(--sage-tint) 0%, var(--cream) 45%, var(--terra-tint) 100%);
 }
 
-/* —— Accueil fidèle maquette (OMM-32) —— */
-
-.topbar.topbar-home {
-  align-items: flex-start;
-  gap: 0.75rem;
-  background: transparent;
-  border-bottom: 0;
-  backdrop-filter: none;
-  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
-  padding-bottom: 0.35rem;
-}
-
-/* Chrome transparent sans brand — Planning + autres écrans (OMM-42) */
-.app-shell-planning,
-.app-shell-plain {
-  position: relative;
-}
-
-.topbar.topbar-planning,
-.topbar.topbar-plain {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
-  gap: 0.75rem;
-  background: transparent;
-  border-bottom: 0;
-  backdrop-filter: none;
-  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
-  padding-bottom: 0.35rem;
-  /* hors flux : pas de ligne brand au-dessus du titre de page */
-  height: auto;
-  pointer-events: none;
-}
-
-.topbar.topbar-planning .burger-trigger,
-.topbar.topbar-plain .burger-trigger {
-  pointer-events: auto;
-}
-
-.topbar-planning-grow,
-.topbar-plain-grow {
-  display: none;
-}
-
-.app-shell-planning > .content,
-.app-shell-plain > .content {
-  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
-}
+/* -- Accueil fidèle maquette (OMM-32) -- */
 
 .home-greeting {
   min-width: 0;
-  flex: 1;
+  margin: 0 0 0.85rem;
 }
 
 .home-greeting-title {
@@ -1388,6 +1376,38 @@ textarea {
 
 .home-tonight-empty .empty-state {
   margin: 0;
+}
+
+.home-tonight-empty-compact {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: start;
+  padding: 0.95rem 1rem;
+  border-radius: var(--radius-card);
+  background: var(--white);
+  border: 1px dashed color-mix(in srgb, var(--terra) 55%, var(--line));
+  box-sizing: border-box;
+}
+
+.home-empty-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--forest);
+  line-height: 1.2;
+}
+
+.home-empty-desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+
+.home-tonight-empty-compact .primary-btn {
+  margin-top: 0.25rem;
+  min-height: 44px;
 }
 
 .home-week-strip {
@@ -1579,6 +1599,9 @@ textarea {
 }
 
 .home-week-empty a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-weight: 600;
 }
 
@@ -1659,26 +1682,24 @@ textarea {
   text-align: center;
 }
 
-/* —— Planning (fidèle maquette) —— */
+/* -- Planning (fidèle maquette) -- */
 .planning-page {
   display: grid;
   gap: 0.75rem;
 }
 
 .planning-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  /* laisse la place au burger (48px) à droite du titre, comme Accueil */
-  padding-right: 3.75rem;
+  display: grid;
+  gap: 0.35rem;
   min-height: 48px;
   box-sizing: border-box;
 }
 
-.planning-titles {
-  display: grid;
-  gap: 0.125rem;
+.planning-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
   min-width: 0;
 }
 
@@ -1693,15 +1714,21 @@ textarea {
 
 .planning-subtitle {
   margin: 0;
+  min-width: 0;
+  flex: 1;
   font-size: 0.9375rem;
-  line-height: 1.35;
+  line-height: 1.2;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .planning-week-nav {
   display: flex;
   gap: 0.5rem;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .planning-week-btn {
@@ -1827,6 +1854,91 @@ textarea {
   gap: 0.5rem;
   min-height: 1.5rem;
   padding-left: 0.125rem;
+}
+
+.planning-day-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.planning-reorder-btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--forest);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.planning-reorder-btn.is-active {
+  background: var(--sage-tint);
+  border-color: color-mix(in srgb, var(--sage) 55%, var(--line));
+}
+
+.planning-slot-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.planning-slot-row .planning-slot,
+.planning-slot-row .planning-slot-empty {
+  flex: 1;
+  min-width: 0;
+}
+
+.planning-slot-reorder {
+  display: grid;
+  gap: 0.25rem;
+  align-content: center;
+}
+
+.planning-slot-move {
+  appearance: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--forest);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.planning-slot-move:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.shop-reorder-bar {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.75rem;
+  justify-items: start;
+}
+
+.shop-reorder-hint {
+  margin: 0;
+}
+
+.shop-item-reorder {
+  display: grid;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.shop-item-reorder .icon-btn.soft {
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .planning-day-title {
@@ -1966,8 +2078,6 @@ textarea {
 }
 
 .planning-editor .editor-header {
-  /* laisse la place au burger (48px), comme Planning / Accueil */
-  padding-right: 3.75rem;
   min-height: 48px;
   box-sizing: border-box;
 }
@@ -1981,6 +2091,47 @@ textarea {
   font-size: 0.9375rem;
   font-weight: 600;
   line-height: 1.35;
+}
+
+.editor-header-left {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.planning-day-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.15rem;
+}
+
+.planning-day-nav-label {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-control);
+  background: var(--sage-tint);
+  color: var(--forest);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.planning-day-nav-btn {
+  appearance: none;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--forest);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
 }
 
 .planning-editor-form {
@@ -2121,7 +2272,14 @@ textarea {
   text-align: center;
 }
 
-/* —— Foyer / partage —— */
+.page-foot-link a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+}
+
+/* -- Foyer / partage -- */
 .foyer-link {
   color: var(--accent);
   text-decoration: none;
@@ -2137,6 +2295,10 @@ textarea {
 }
 
 .home-foyer-cta a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   color: var(--accent);
   font-weight: 600;
 }
@@ -2259,7 +2421,7 @@ textarea {
   color: #a33 !important;
 }
 
-/* —— Pull-to-refresh —— */
+/* -- Pull-to-refresh -- */
 .ptr-root {
   min-height: 100%;
   overflow-y: auto;
@@ -2303,7 +2465,7 @@ textarea {
   font-weight: 600;
 }
 
-/* —— Toasts (copier / nouveau membre) —— */
+/* -- Toasts (copier / nouveau membre) -- */
 
 .toast-stack {
   position: fixed;
@@ -2341,7 +2503,7 @@ textarea {
   }
 }
 
-/* —— Onboarding cartoon —— */
+/* -- Onboarding cartoon -- */
 
 .onboarding-backdrop {
   position: fixed;
@@ -2421,7 +2583,7 @@ textarea {
   text-align: center;
 }
 
-/* —— PWA install banner —— */
+/* -- PWA install banner -- */
 
 .pwa-banner {
   display: flex;
@@ -2459,7 +2621,7 @@ textarea {
   font-size: 0.85rem;
 }
 
-/* —— Courses : qui a coché —— */
+/* -- Courses : qui a coché -- */
 
 .checked-by-chip {
   display: inline-flex;
@@ -2478,7 +2640,7 @@ textarea {
   width: fit-content;
 }
 
-/* —— Actions UI polish (menus, filtres, icônes soft) —— */
+/* -- Actions UI polish (menus, filtres, icônes soft) -- */
 
 .back-link {
   border: 0;
@@ -2529,7 +2691,7 @@ textarea {
   color: var(--forest);
 }
 
-/* Shell burger — after .icon-btn so white circle wins over transparent defaults */
+/* Shell burger - after .icon-btn so white circle wins over transparent defaults */
 .icon-btn.burger-trigger {
   width: 3rem;
   height: 3rem;
@@ -2707,7 +2869,7 @@ textarea {
   align-self: center;
 }
 
-/* —— Impression liste de courses (Partager / Imprimer via menu ⋯) —— */
+/* -- Impression liste de courses (Partager / Imprimer via menu ⋯) -- */
 
 .print-sheet {
   display: none;
@@ -2885,7 +3047,7 @@ textarea {
   }
 }
 
-/* —— Burger drawer / menu —— */
+/* -- Burger drawer / menu -- */
 
 .burger-root {
   position: fixed;
@@ -2921,7 +3083,8 @@ textarea {
   border-left: 1px solid var(--line);
   box-shadow: -12px 0 32px rgba(31, 61, 43, 0.14);
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto;
+  /* head, profile, nav (grow), sync footer, logout */
+  grid-template-rows: auto auto 1fr auto auto;
   gap: 0.85rem;
   animation: burger-in 0.28s var(--ease-out);
 }
@@ -2988,6 +3151,10 @@ textarea {
 
 .burger-sync {
   min-width: 0;
+}
+
+.burger-sync-footer {
+  margin-top: 0.25rem;
 }
 
 .burger-nav {
@@ -3071,7 +3238,7 @@ textarea {
   transform: translateY(1px);
 }
 
-/* —— OMM-34 Autres écrans (recettes, courses, foyer, produits…) —— */
+/* -- OMM-34 Autres écrans (recettes, courses, foyer, produits…) -- */
 
 .recipe-card-list .recipe-card {
   padding: 0.65rem 0.7rem 0.65rem 0.65rem;
@@ -3225,7 +3392,7 @@ textarea {
   font-size: 1.05rem;
 }
 
-/* —— Dish illustrations (refonte plats) —— */
+/* -- Dish illustrations (refonte plats) -- */
 
 .dish-illo-frame {
   --dish-pastel: var(--sage-tint);

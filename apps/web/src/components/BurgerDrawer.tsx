@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { useHousehold } from '../hooks/useHousehold';
 import { usePwaInstall } from '../hooks/usePwaInstall';
+import {
+  requestOnboardingReplay,
+  resetOnboardingDone,
+} from './OnboardingOverlay';
 import { SyncIndicator } from './SyncIndicator';
 
 interface BurgerDrawerProps {
@@ -116,10 +120,6 @@ export function BurgerDrawer({ open, onClose, triggerRef }: BurgerDrawerProps) {
           ) : null}
         </div>
 
-        <div className="burger-sync">
-          <SyncIndicator compact />
-        </div>
-
         <nav className="burger-nav" aria-label="Compte et foyer">
           <DrawerLink to="/produits" onNavigate={onClose} meta="Catalogue & personnalisés">
             Produits
@@ -128,6 +128,23 @@ export function BurgerDrawer({ open, onClose, triggerRef }: BurgerDrawerProps) {
           <DrawerLink to="/foyer" onNavigate={onClose} meta={foyerMeta}>
             {foyerLabel}
           </DrawerLink>
+
+          <button
+            type="button"
+            className="burger-link"
+            onClick={() => {
+              const uid = session?.user._id;
+              onClose();
+              if (!uid) return;
+              void (async () => {
+                await resetOnboardingDone(uid);
+                requestOnboardingReplay();
+              })();
+            }}
+          >
+            <span className="burger-link-label">Guide de démarrage</span>
+            <span className="burger-link-meta">Relancer la visite</span>
+          </button>
 
           {pwa.canPrompt ? (
             <button
@@ -145,12 +162,12 @@ export function BurgerDrawer({ open, onClose, triggerRef }: BurgerDrawerProps) {
               <span className="meta">Safari → Partager → Sur l’écran d’accueil</span>
             </div>
           ) : null}
-
-          <div className="burger-hint burger-about">
-            <strong>À propos</strong>
-            <span className="meta">OrgMyMiam — recettes, planning & courses, même hors ligne.</span>
-          </div>
         </nav>
+
+        {/* Placement choisi : bas du menu, au-dessus de Déconnexion (statut discret, tap = force sync). */}
+        <div className="burger-sync burger-sync-footer">
+          <SyncIndicator compact />
+        </div>
 
         <button
           type="button"

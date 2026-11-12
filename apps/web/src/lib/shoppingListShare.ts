@@ -2,11 +2,19 @@ import type { ShoppingListItem } from '@orgmymiam/shared';
 import { formatPlanDate } from './planDates';
 import { formatQuantity } from './units';
 
+/**
+ * Remplace les tirets cadratin hérités (ex. titres « Courses — … »)
+ * par un séparateur UI autorisé.
+ */
+export function sanitizeUiEmDash(text: string): string {
+  return text.replace(/\s*—\s*/g, ' · ').replace(/ {2,}/g, ' ').trim();
+}
+
 export function shoppingListTitleFromRange(rangeFrom: string, rangeTo: string): string {
   if (rangeFrom === rangeTo) {
-    return `Courses — ${formatPlanDate(rangeFrom)}`;
+    return `Courses · ${formatPlanDate(rangeFrom)}`;
   }
-  return `Courses — ${formatPlanDate(rangeFrom)} → ${formatPlanDate(rangeTo)}`;
+  return `Courses · ${formatPlanDate(rangeFrom)} → ${formatPlanDate(rangeTo)}`;
 }
 
 /** Texte checklist plat (sans catégories) pour partage / presse-papiers. */
@@ -15,7 +23,7 @@ export function formatShoppingListShareText(
   items: ShoppingListItem[],
   notes?: string | null,
 ): string {
-  const lines: string[] = [title];
+  const lines: string[] = [sanitizeUiEmDash(title)];
   if (notes?.trim()) {
     lines.push(notes.trim());
   }
@@ -23,8 +31,8 @@ export function formatShoppingListShareText(
 
   for (const item of items) {
     const box = item.checked ? '[x]' : '[ ]';
-    const note = item.note?.trim() ? ` — ${item.note.trim()}` : '';
-    lines.push(`${box} ${item.nameSnapshot} — ${formatQuantity(item.quantity, item.unit)}${note}`);
+    const note = item.note?.trim() ? ` · ${item.note.trim()}` : '';
+    lines.push(`${box} ${item.nameSnapshot} · ${formatQuantity(item.quantity, item.unit)}${note}`);
   }
 
   return lines.join('\n').trimEnd();

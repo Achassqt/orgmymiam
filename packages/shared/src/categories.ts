@@ -13,7 +13,13 @@ export const PRODUCT_CATEGORIES = [
 
 export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
 
-export const MEAL_TYPES = ['petit_dejeuner', 'dejeuner', 'diner', 'collation'] as const;
+export const MEAL_TYPES = [
+  'petit_dejeuner',
+  'dejeuner',
+  'diner',
+  'collation',
+  'en_cas',
+] as const;
 
 export type MealType = (typeof MEAL_TYPES)[number];
 
